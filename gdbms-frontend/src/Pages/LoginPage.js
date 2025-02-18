@@ -1,10 +1,12 @@
-import React from 'react'
+import React,{useState} from 'react'
 import mainImage from "../assets/Images/Deadpool.jpeg"
 import { useNavigate } from "react-router-dom";
-
+import ForgetPasswordModal from '../Modals/ForgetPasswordModal';
 
 const LoginPage = () => {
   const navigate = useNavigate();
+  const [showModal, setShowModal] = useState(false);
+
   return (
     <div className="flex flex-col md:flex-row w-full h-[100vh] min-h-screen bg-gray-800">
     {/* Left Section */}
@@ -47,7 +49,10 @@ const LoginPage = () => {
           className="w-full bg-white text-black py-3 px-4 md:py-4 md:px-5 bg-transparent border-b border-black focus:outline-blue rounded-lg"
         />
         <div className="w-full flex items-center justify-between mt-4">
-          <p className="text-sm font-medium underline cursor-pointer text-white">
+          <p 
+          className="text-sm font-medium underline cursor-pointer text-white"
+          onClick={() => setShowModal(true)}
+          >
             Forgot Password?
           </p>
         </div>
@@ -76,6 +81,8 @@ const LoginPage = () => {
         </div>
       </div>
     </div>
+      {/* Forget Password Modal */}
+      {showModal && <ForgetPasswordModal onClose={() => setShowModal(false)} />}
     </div>
   )
 }

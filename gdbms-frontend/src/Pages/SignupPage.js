@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import signupImage from "../assets/Images/tom.png";
 import { useNavigate } from 'react-router-dom';
-import ForgetPasswordModal from '../Modals/ForgetPasswordModal';
+
 
 const SignupPage = () => {
     const navigate = useNavigate();
-    const [showModal, setShowModal] = useState(false);
+
 
     return (
         <div className="flex flex-col md:flex-row w-full h-[100vh] bg-gray-900">
@@ -59,15 +59,7 @@ const SignupPage = () => {
                         placeholder="Password"
                         className="w-full bg-white text-black py-3 px-4 md:py-4 md:px-5 bg-transparent border-b border-black focus:outline-blue rounded-lg"
                     />
-                    {/* Remember Me and Forgot Password */}
-                    <div className="w-full flex items-center justify-between mt-4">
-                        <p
-                            className="text-sm font-medium underline cursor-pointer text-white"
-                            onClick={() => setShowModal(true)}
-                        >
-                            Forgot Password?
-                        </p>
-                    </div>
+                
                     
                     {/* Signup Button */}
                     <div className="w-full flex my-4">
@@ -93,8 +85,7 @@ const SignupPage = () => {
                 </div>
             </div>
             
-            {/* Forget Password Modal */}
-            {showModal && <ForgetPasswordModal onClose={() => setShowModal(false)} />}
+          
         </div>
     );
 };

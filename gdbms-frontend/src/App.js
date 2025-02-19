@@ -1,11 +1,12 @@
 import "./App.css";
-import { Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import LoginPage from "./Pages/LoginPage";
 import SignupPage from "./Pages/SignupPage";
 import Dashboard from "./Pages/Dashboard";
 import SideBar from "./Components/sidebar";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import MemberList from "./Pages/MemberList";
 
 function App() {
   const navigate = useNavigate();
@@ -27,6 +28,7 @@ function App() {
         <Route path="/" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/memberList" element={<MemberList />} />
       </Routes>
     </div>
   );

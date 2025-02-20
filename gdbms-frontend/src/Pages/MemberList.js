@@ -1,23 +1,22 @@
 import React, { useState } from "react";
-import { Row, Col, Modal, Form, Input, Select } from "antd";
+import { Row, Col, Modal, Form, Input, Select, Button } from "antd";
 import ListCard from "../Components/ListCard";
-import { grey } from "@mui/material/colors";
 
 const dummyMembers = [
   {
     _id: "1",
     name: "John Doe",
-    email: "johndoe@example.com",
+    email: "NewYork",
     phoneNumber: "123-456-7890",
-    memberType: "Regular",
+    memberType: "2 month",
     joinDate: "2023-05-20",
   },
   {
     _id: "2",
     name: "Jane Smith",
-    email: "janesmith@example.com",
+    email: "Jawalakhel",
     phoneNumber: "987-654-3210",
-    memberType: "Premium",
+    memberType: "1 month",
     joinDate: "2022-11-15",
   },
 ];
@@ -31,8 +30,14 @@ const ColStyles = {
 const MemberList = ({ members = dummyMembers, memberTypeOptions }) => {
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
+  const [isAddMembershipModalVisible, setIsAddMembershipModalVisible] =
+    useState(false);
   const [editMemberData, setEditMemberData] = useState({});
   const [searchQuery, setSearchQuery] = useState("");
+  const [membershipData, setMembershipData] = useState({
+    month: "",
+    price: "",
+  });
 
   const showEditModal = (member) => {
     setEditMemberData(member);
@@ -54,6 +59,16 @@ const MemberList = ({ members = dummyMembers, memberTypeOptions }) => {
   const handleCancel = () => {
     setIsEditModalVisible(false);
     setIsDeleteModalVisible(false);
+    setIsAddMembershipModalVisible(false);
+  };
+
+  const handleAddMember = () => {
+    setIsAddMembershipModalVisible(true);
+  };
+
+  const handleMembershipSubmit = () => {
+    console.log("New Membership Added: ", membershipData);
+    setIsAddMembershipModalVisible(false);
   };
 
   const filteredMembers = members.filter((member) =>
@@ -64,18 +79,31 @@ const MemberList = ({ members = dummyMembers, memberTypeOptions }) => {
 
   return (
     <div className="flex-1 flex-row bg-slate-100 px-4">
-      <h1 className="text-black text-2xl my-8">Member List</h1>
-      <Input
-        placeholder="Search members..."
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
+      <h1 className="text-black text-3xl my-5 font-semibold">Member List</h1>
+      <div
         style={{
-          marginBottom: 16,
-          width: "60%",
-          borderWidth: 1,
-          borderColor: "lightgray",
+          display: "flex",
+          gap: "10px",
+          marginBottom: "16px",
         }}
-      />
+      >
+        <Input
+          placeholder="Search members..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          style={{ width: "60%" }}
+        />
+        <Button
+          type="primary"
+          onClick={handleAddMember}
+          style={{
+            backgroundColor: "#1e2837",
+            borderColor: "#1e2837",
+          }}
+        >
+          Add Membership
+        </Button>
+      </div>
       <Row
         style={{
           backgroundColor: "#1e2837",
@@ -87,8 +115,8 @@ const MemberList = ({ members = dummyMembers, memberTypeOptions }) => {
         {[
           "Index",
           "Members Name",
-          "Members Email",
-          "Members Number",
+          "Address",
+          "Phone Number",
           "Membership Type",
           "Join Date",
           "Edit Member",
@@ -161,16 +189,39 @@ const MemberList = ({ members = dummyMembers, memberTypeOptions }) => {
         </Form>
       </Modal>
 
-      {/* Delete Confirmation Modal */}
+      {/* Add Membership Modal */}
       <Modal
-        title="Confirm Delete"
-        open={isDeleteModalVisible}
-        onOk={handleDeleteMember}
+        title="Add Membership"
+        open={isAddMembershipModalVisible}
+        onOk={handleMembershipSubmit}
         onCancel={handleCancel}
-        okText="Yes, Delete"
+        okText="Add Membership"
         cancelText="Cancel"
       >
-        <p>Are you sure you want to delete this member?</p>
+        <Form layout="vertical">
+          <Form.Item label="Month">
+            <Input
+              value={membershipData.month}
+              onChange={(e) =>
+                setMembershipData((prev) => ({
+                  ...prev,
+                  month: e.target.value,
+                }))
+              }
+            />
+          </Form.Item>
+          <Form.Item label="Price">
+            <Input
+              value={membershipData.price}
+              onChange={(e) =>
+                setMembershipData((prev) => ({
+                  ...prev,
+                  price: e.target.value,
+                }))
+              }
+            />
+          </Form.Item>
+        </Form>
       </Modal>
     </div>
   );

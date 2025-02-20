@@ -16,7 +16,7 @@ const SideBar = () => {
 
   const items = [
     { label: "Dashboard", path: "/dashboard", icon: <PieChartOutlined /> },
-    { label: "Add Members", path: "/addMembers", icon: <DesktopOutlined /> },
+    { label: "Add Members", path: "/addMember", icon: <DesktopOutlined /> },
     { label: "Member List", path: "/memberList", icon: <TeamOutlined /> },
     { label: "Profile", path: "/profileScreen", icon: <UserOutlined /> },
   ];

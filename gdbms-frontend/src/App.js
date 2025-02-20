@@ -7,6 +7,7 @@ import SideBar from "./Components/sidebar";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import MemberList from "./Pages/MemberList";
+import AddMemberForm from "./Pages/AddMembers";
 
 function App() {
   const navigate = useNavigate();
@@ -29,6 +30,7 @@ function App() {
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/memberList" element={<MemberList />} />
+        <Route path="/addMember" element={<AddMemberForm />} />
       </Routes>
     </div>
   );

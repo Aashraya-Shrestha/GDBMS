@@ -25,7 +25,7 @@ const Dashboard = () => {
     <div className="w-full text-black p-5 relative">
       {/* Header Section */}
       <div className="w-full bg-slate-800 text-white rounded-lg flex p-3 justify-between items-center">
-        <div className="font-normal text-sm">Good Morning Admin!</div>
+        <div className="font-normal text-xl">Hello Admin!</div>
         <div className="w-10 h-10 rounded-3xl border-1 bg-white">
           <Avatar />
         </div>

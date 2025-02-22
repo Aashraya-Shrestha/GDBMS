@@ -47,7 +47,7 @@ const AddMemberForm = ({ handleAddMember }) => {
   };
 
   return (
-    <div className="flex items-center justify-center w-full min-h-screen bg-gray-500 p-10">
+    <div className="flex items-center justify-center w-5/6 min-h-screen bg-gray-500 p-10">
       <div className="w-full flex flex-col gap-6 max-w-2xl bg-gray-800 p-12 rounded-lg shadow-lg">
         <div className="w-full text-center">
           <h2 className="text-4xl font-semibold mb-2 text-white">

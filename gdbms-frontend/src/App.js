@@ -8,6 +8,8 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import MemberList from "./Pages/MemberList";
 import AddMemberForm from "./Pages/AddMembers";
+import GeneralUser from "./Pages/GeneralUser";
+import MemberDetail from "./Pages/MemberDetail";
 
 function App() {
   const navigate = useNavigate();
@@ -18,6 +20,9 @@ function App() {
     if (isLoggedIn) {
       setIsLogin(true);
       navigate("/dashboard");
+    } else {
+      setIsLogin(false);
+      navigate("/");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionStorage.getItem("isLogin")]);
@@ -31,6 +36,8 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/memberList" element={<MemberList />} />
         <Route path="/addMember" element={<AddMemberForm />} />
+        <Route path="/specific/:page" element={<GeneralUser />} />
+        <Route path="/member/:id" element={<MemberDetail />} />
       </Routes>
     </div>
   );

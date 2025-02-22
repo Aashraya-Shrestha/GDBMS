@@ -21,15 +21,15 @@ const SideBar = () => {
     { label: "Profile", path: "/profileScreen", icon: <UserOutlined /> },
   ];
 
-  const handleLogout = () => {
-    sessionStorage.setItem("isLogin", false);
+  const handleLogout = async () => {
+    sessionStorage.clear();
     navigate("/");
   };
 
   return (
     <div
       className={`h-screen bg-gray-900 text-white ${
-        collapsed ? "w-16" : "w-64"
+        collapsed ? "w-16" : "w-1/6"
       } transition-all duration-300 flex flex-col`}
     >
       {/* Sidebar Header */}

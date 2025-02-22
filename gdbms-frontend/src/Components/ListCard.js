@@ -3,11 +3,12 @@ import { Button, Col, Row } from "antd";
 const ListCard = ({
   index,
   name,
-  email,
+  address,
   phoneNumber,
   memberType,
   joinDate,
-  editMember,
+  expireDate,
+  memberDetail,
   deleteMember,
 }) => {
   const ColStyles = {
@@ -25,17 +26,13 @@ const ListCard = ({
     <Row style={{ display: "flex", width: "100%" }}>
       <Col style={ColStyles}>{index}</Col>
       <Col style={ColStyles}>{name}</Col>
-      <Col style={ColStyles}>{email}</Col>
+      <Col style={ColStyles}>{address}</Col>
       <Col style={ColStyles}>{phoneNumber}</Col>
       <Col style={ColStyles}>{memberType}</Col>
       <Col style={ColStyles}>{joinDate}</Col>
+      <Col style={ColStyles}>{expireDate}</Col>
       <Col style={ColStyles}>
-        <Button onClick={editMember}>Edit</Button>
-      </Col>
-      <Col style={ColStyles}>
-        <Button danger onClick={deleteMember}>
-          Delete
-        </Button>
+        <Button onClick={memberDetail}>View</Button>
       </Col>
     </Row>
   );

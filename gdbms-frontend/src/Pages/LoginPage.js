@@ -2,13 +2,26 @@ import React, { useState } from "react";
 import mainImage from "../assets/Images/Deadpool.jpeg";
 import { useNavigate } from "react-router-dom";
 import ForgetPasswordModal from "../Modals/ForgetPasswordModal";
+import { IconButton, InputAdornment } from "@mui/material";
+import { Visibility, VisibilityOff } from "@mui/icons-material";
 
 const LoginPage = () => {
   const navigate = useNavigate();
   const [showModal, setShowModal] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const [loginInfo, setLoginInfo] = useState({ email: "", password: "" });
+  const handleOnChange = (event, name) => {
+    setLoginInfo({ ...loginInfo, [name]: event.target.value });
+  };
+
   const handleLogin = () => {
     sessionStorage.setItem("isLogin", true);
     navigate("/dashboard");
+  };
+
+  const togglePasswordVisibility = () => {
+    setShowPassword((prev) => !prev);
   };
 
   return (
@@ -35,23 +48,41 @@ const LoginPage = () => {
             <h2 className="text-2xl md:text-4xl font-semibold mb-4 text-white ">
               Login
             </h2>
-            <p className="text-sm  text-white">
+            <p className="text-sm text-white">
               Welcome Back! Please enter your details
             </p>
           </div>
+
           <input
             type="email"
             name="email"
             placeholder="Email"
-            className="w-full bg-white text-black py-3 px-4 md:py-4 md:px-5 bg-transparent border-b border-black focus:outline-blue rounded-lg"
+            value={loginInfo.email}
+            onChange={(e) => handleOnChange(e, "email")}
+            className="w-full bg-white text-black py-3 px-4 md:py-4 md:px-5 border-b border-black focus:outline-blue rounded-lg"
           />
 
-          <input
-            type="password"
-            name="password"
-            placeholder="Password"
-            className="w-full bg-white text-black py-3 px-4 md:py-4 md:px-5 bg-transparent border-b border-black focus:outline-blue rounded-lg"
-          />
+          <div className="relative w-full">
+            <input
+              type={showPassword ? "text" : "password"}
+              name="password"
+              placeholder="Password"
+              value={loginInfo.password}
+              onChange={(e) => handleOnChange(e, "password")}
+              className="w-full bg-white text-black py-3 px-4 md:py-4 md:px-5 border-b border-black focus:outline-blue rounded-lg"
+            />
+            {loginInfo.password && (
+              <InputAdornment
+                position="end"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2"
+              >
+                <IconButton onClick={togglePasswordVisibility} edge="end">
+                  {showPassword ? <VisibilityOff /> : <Visibility />}
+                </IconButton>
+              </InputAdornment>
+            )}
+          </div>
+
           <div className="w-full flex items-center justify-between mt-4">
             <p
               className="text-sm font-medium underline cursor-pointer text-white"
@@ -62,17 +93,17 @@ const LoginPage = () => {
           </div>
 
           {/* Login Button */}
-          <div className="w-full flex my-4 ">
+          <div className="w-full flex my-4">
             <button
               className="w-full text-white font-semibold bg-[#1c1a1ae6] rounded-md py-3 md:py-4 hover:bg-red-900 hover:text-gray-100 hover:scale-105 hover:shadow-lg transition-all duration-300"
-              onClick={() => handleLogin()}
+              onClick={handleLogin}
             >
               Login
             </button>
           </div>
 
           {/* Signup Section */}
-          <div className="w-full flex flex-col items-center ">
+          <div className="w-full flex flex-col items-center">
             <span className="text-sm text-white mb-2">
               Don't have an account?
             </span>
@@ -85,6 +116,7 @@ const LoginPage = () => {
           </div>
         </div>
       </div>
+
       {/* Forget Password Modal */}
       {showModal && <ForgetPasswordModal onClose={() => setShowModal(false)} />}
     </div>

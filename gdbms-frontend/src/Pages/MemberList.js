@@ -1,23 +1,26 @@
 import React, { useState } from "react";
 import { Row, Col, Modal, Form, Input, Select, Button } from "antd";
 import ListCard from "../Components/ListCard";
+import { useNavigate } from "react-router-dom";
 
 const dummyMembers = [
   {
     _id: "1",
     name: "John Doe",
-    email: "NewYork",
+    address: "NewYork",
     phoneNumber: "123-456-7890",
     memberType: "2 month",
     joinDate: "2023-05-20",
+    expireDate: "2023-08-20",
   },
   {
     _id: "2",
     name: "Jane Smith",
-    email: "Jawalakhel",
+    address: "Jawalakhel",
     phoneNumber: "987-654-3210",
     memberType: "1 month",
     joinDate: "2022-11-15",
+    expireDate: "2022-12-15",
   },
 ];
 
@@ -28,37 +31,20 @@ const ColStyles = {
 };
 
 const MemberList = ({ members = dummyMembers, memberTypeOptions }) => {
-  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
-  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [isAddMembershipModalVisible, setIsAddMembershipModalVisible] =
     useState(false);
-  const [editMemberData, setEditMemberData] = useState({});
   const [searchQuery, setSearchQuery] = useState("");
   const [membershipData, setMembershipData] = useState({
     month: "",
     price: "",
   });
+  const navigate = useNavigate();
 
-  const showEditModal = (member) => {
-    setEditMemberData(member);
-    setIsEditModalVisible(true);
-  };
-
-  const showDeleteConfirmation = (id) => {
-    setIsDeleteModalVisible(true);
-  };
-
-  const handleEditMember = () => {
-    setIsEditModalVisible(false);
-  };
-
-  const handleDeleteMember = () => {
-    setIsDeleteModalVisible(false);
+  const handleViewMember = () => {
+    navigate("/member/123");
   };
 
   const handleCancel = () => {
-    setIsEditModalVisible(false);
-    setIsDeleteModalVisible(false);
     setIsAddMembershipModalVisible(false);
   };
 
@@ -119,8 +105,8 @@ const MemberList = ({ members = dummyMembers, memberTypeOptions }) => {
           "Phone Number",
           "Membership Type",
           "Join Date",
-          "Edit Member",
-          "Delete Member",
+          "Expiring Date",
+          "Member Details",
         ].map((header, index) => (
           <Col key={index} span={3} style={ColStyles}>
             {header}
@@ -134,60 +120,17 @@ const MemberList = ({ members = dummyMembers, memberTypeOptions }) => {
             key={item._id}
             index={index}
             name={item.name}
-            email={item.email}
+            address={item.address}
             phoneNumber={item.phoneNumber}
             memberType={item.memberType}
             joinDate={new Date(item.joinDate).toLocaleDateString()}
-            editMember={() => showEditModal(item)}
-            deleteMember={() => showDeleteConfirmation(item._id)}
+            expireDate={item.expireDate}
+            memberDetail={() => handleViewMember(item._id)}
           />
         ))
       ) : (
         <p>No members available</p>
       )}
-
-      {/* Edit Member Modal */}
-      <Modal
-        title="Edit Member"
-        open={isEditModalVisible}
-        onOk={handleEditMember}
-        onCancel={handleCancel}
-        okText="Save Changes"
-        cancelText="Cancel"
-      >
-        <Form layout="vertical">
-          <Form.Item label="Name">
-            <Input
-              value={editMemberData.name}
-              onChange={(e) =>
-                setEditMemberData((prev) => ({ ...prev, name: e.target.value }))
-              }
-            />
-          </Form.Item>
-          <Form.Item label="Email">
-            <Input
-              value={editMemberData.email}
-              onChange={(e) =>
-                setEditMemberData((prev) => ({
-                  ...prev,
-                  email: e.target.value,
-                }))
-              }
-            />
-          </Form.Item>
-          <Form.Item label="Phone Number">
-            <Input
-              value={editMemberData.phoneNumber}
-              onChange={(e) =>
-                setEditMemberData((prev) => ({
-                  ...prev,
-                  phoneNumber: e.target.value,
-                }))
-              }
-            />
-          </Form.Item>
-        </Form>
-      </Modal>
 
       {/* Add Membership Modal */}
       <Modal

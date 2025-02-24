@@ -156,3 +156,9 @@ exports.resetPassword = async (req, res) => {
     });
   }
 };
+
+exports.logout = async (req, res) => {
+  res
+    .clearCookie("cookie_token", cookieOptions)
+    .json({ message: "You have logged out successfully " });
+};

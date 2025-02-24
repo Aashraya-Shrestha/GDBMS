@@ -5,12 +5,13 @@ const gymSchema = mongoose.Schema(
     email: {
       type: String,
       required: true,
+      unique: true,
     },
     gymName: {
       type: String,
       required: true,
     },
-    uername: {
+    username: {
       type: String,
       required: true,
     },
@@ -28,6 +29,6 @@ const gymSchema = mongoose.Schema(
   { timestamps: true }
 );
 
-const modal = mongoose.mode("gym", gymSchema);
+const modal = mongoose.model("gym", gymSchema);
 
 module.exports = modal;

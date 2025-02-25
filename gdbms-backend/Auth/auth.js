@@ -3,7 +3,7 @@ const jwt = require("jsonwebtoken");
 
 const auth = async (req, res, next) => {
   try {
-    const token = res.cookies.cookie_token;
+    const token = req.cookies.cookie_token;
     if (!token) {
       return res.status(401).json({ error: "No token, authorization denied " });
     }

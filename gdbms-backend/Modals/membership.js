@@ -18,6 +18,6 @@ const MembershipSchema = mongoose.Schema({
   },
 });
 
-const modalMembership = mongoose.Model("membership", MembershipSchema);
+const modalMembership = mongoose.model("membership", MembershipSchema);
 
 module.exports = modalMembership;

@@ -30,7 +30,7 @@ const memebrSchema = mongoose.Schema({
 
   status: {
     type: String,
-    default: Active,
+    default: "Active",
   },
 
   lastPayment: {
@@ -44,6 +44,6 @@ const memebrSchema = mongoose.Schema({
   },
 });
 
-const memberModal = mongoose.Model("members", memberModal);
+const memberModal = mongoose.model("members", memebrSchema);
 
 module.exports = memberModal;

@@ -44,7 +44,7 @@ const memebrSchema = mongoose.Schema(
       required: true,
     },
   },
-  { timestamps: true }
+  {}
 );
 
 const memberModal = mongoose.model("members", memebrSchema);

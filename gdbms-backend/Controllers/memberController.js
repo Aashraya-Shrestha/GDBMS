@@ -44,6 +44,7 @@ exports.addMember = async (req, res) => {
         phoneNumber,
         membership,
         gym: req.gym._id,
+        lastPayment: joinDate,
         nextBillDate,
       });
       await newMember.save();
@@ -56,6 +57,108 @@ exports.addMember = async (req, res) => {
       });
     }
   } catch (err) {
+    res.status(500).json({
+      error: "Server Error",
+      details: err.message,
+    });
+  }
+};
+
+exports.monthlyMembers = async (req, res) => {
+  try {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(
+      now.getFullYear(),
+      now.getMonth() + 1,
+      0,
+      23,
+      59,
+      59,
+      999
+    );
+
+    const member = await Member.find({
+      gym: req.gym._id,
+      createdAt: {
+        $gte: startOfMonth,
+        $lte: endOfMonth,
+      },
+    }).sort({ createdAt: -1 });
+
+    res.status(200).json({
+      message: member.length
+        ? "Members fetched successfully"
+        : "No memebrs have been added this month",
+      members: member,
+      totalMembers: member.length,
+    });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({
+      error: "Server Error",
+      details: err.message,
+    });
+  }
+};
+
+exports.expiringWithin3Days = async (req, res) => {
+  const today = new Date();
+  const nextThreeDays = new Date();
+  nextThreeDays.setDate(today.getDate() + 3);
+
+  const member = await Member.find({
+    gym: req.gym._id,
+    nextBillDate: {
+      $gte: today,
+      $lte: nextThreeDays,
+    },
+  });
+  res.status(200).json({
+    message: member.length
+      ? "Members fetched successfully"
+      : "No memebrship expires in the next 3 days",
+    members: member,
+    totalMembers: member.length,
+  });
+};
+
+exports.expiringWithin4to7days = async (req, res) => {
+  try {
+    const today = new Date();
+    const next4days = new Date();
+    next4days.setDate(today.getDate() + 4);
+    next7days = new Date();
+    next7days.setDate(today.getDate() + 7);
+
+    const member = await Member.find({
+      gym: req.gym._id,
+      nextBillDate: {
+        $gte: next4days,
+        $lte: next7days,
+      },
+    });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({
+      error: "Server Error",
+      details: err.message,
+    });
+  }
+};
+
+exports.expiredMemberships = async (req, res) => {
+  try {
+    const today = new Date();
+    const member = await Member.find({
+      gym: req.gym._id,
+      status: "Active",
+      nextBillDate: {
+        $lt: today,
+      },
+    });
+  } catch (err) {
+    console.log(err);
     res.status(500).json({
       error: "Server Error",
       details: err.message,

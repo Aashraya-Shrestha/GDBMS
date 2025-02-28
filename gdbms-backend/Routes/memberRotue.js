@@ -19,4 +19,8 @@ router.get(
 );
 
 router.get("/expiredMemberships", auth, memberController.expiredMemberships);
+router.get("/inactiveMembers", auth, memberController.inactiveMembers);
+router.get("/member-detail/:id", auth, memberController.getMemberDetail);
+router.post("/changeStatus/:id", auth, memberController.changeStatus);
+
 module.exports = router;

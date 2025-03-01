@@ -1,7 +1,9 @@
 import React, { useState } from "react";
-import { Row, Col, Modal, Form, Input, Select, Button } from "antd";
+import { Row, Col, Modal, Form, Input, Button } from "antd";
 import ListCard from "../Components/ListCard";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import { toast, ToastContainer } from "react-toastify";
 
 const dummyMembers = [
   {
@@ -35,7 +37,7 @@ const MemberList = ({ members = dummyMembers, memberTypeOptions }) => {
     useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [membershipData, setMembershipData] = useState({
-    month: "",
+    months: "",
     price: "",
   });
   const navigate = useNavigate();
@@ -52,9 +54,21 @@ const MemberList = ({ members = dummyMembers, memberTypeOptions }) => {
     setIsAddMembershipModalVisible(true);
   };
 
-  const handleMembershipSubmit = () => {
-    console.log("New Membership Added: ", membershipData);
-    setIsAddMembershipModalVisible(false);
+  const handleMembershipSubmit = async () => {
+    try {
+      const response = await axios.post(
+        "http://localhost:4000/plans/add-membership",
+        membershipData, // Pass membershipData correctly
+        { withCredentials: true }
+      );
+      toast.success(response.data.message); // Use the success message from the response
+      setIsAddMembershipModalVisible(false); // Close the modal after success
+    } catch (error) {
+      toast.error(
+        "Error adding membership: " +
+          (error.response ? error.response.data.error : error.message)
+      );
+    }
   };
 
   const filteredMembers = members.filter((member) =>
@@ -144,11 +158,11 @@ const MemberList = ({ members = dummyMembers, memberTypeOptions }) => {
         <Form layout="vertical">
           <Form.Item label="Month">
             <Input
-              value={membershipData.month}
+              value={membershipData.months}
               onChange={(e) =>
                 setMembershipData((prev) => ({
                   ...prev,
-                  month: e.target.value,
+                  months: e.target.value,
                 }))
               }
             />
@@ -166,6 +180,7 @@ const MemberList = ({ members = dummyMembers, memberTypeOptions }) => {
           </Form.Item>
         </Form>
       </Modal>
+      <ToastContainer />
     </div>
   );
 };

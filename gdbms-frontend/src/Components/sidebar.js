@@ -22,7 +22,7 @@ const SideBar = () => {
   ];
 
   const handleLogout = async () => {
-    sessionStorage.clear();
+    localStorage.clear();
     navigate("/");
   };
 

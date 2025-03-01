@@ -4,8 +4,11 @@ import { useNavigate } from "react-router-dom";
 import ForgetPasswordModal from "../Modals/ForgetPasswordModal";
 import { IconButton, InputAdornment } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
+import axios from "axios";
+import { toast, ToastContainer } from "react-toastify";
 
 const LoginPage = () => {
+  const gymRoute = process.env.REACT_APP_GYM_ROUTE;
   const navigate = useNavigate();
   const [showModal, setShowModal] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -15,9 +18,21 @@ const LoginPage = () => {
     setLoginInfo({ ...loginInfo, [name]: event.target.value });
   };
 
-  const handleLogin = () => {
-    sessionStorage.setItem("isLogin", true);
-    navigate("/dashboard");
+  const handleLogin = async () => {
+    try {
+      await axios
+        .post(`${gymRoute}/login`, loginInfo, {
+          withCredentials: true,
+        })
+        .then((response) => {
+          localStorage.setItem("gymName", response.data.gym.gymName);
+          localStorage.setItem("isLogin", true);
+          localStorage.setItem("token", response.data.token);
+          navigate("/dashboard");
+        });
+    } catch (error) {
+      console.error("Login Error:", error.response?.data || error.message);
+    }
   };
 
   const togglePasswordVisibility = () => {
@@ -119,6 +134,7 @@ const LoginPage = () => {
 
       {/* Forget Password Modal */}
       {showModal && <ForgetPasswordModal onClose={() => setShowModal(false)} />}
+      <ToastContainer />
     </div>
   );
 };

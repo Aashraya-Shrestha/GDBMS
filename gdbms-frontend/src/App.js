@@ -10,13 +10,14 @@ import MemberList from "./Pages/MemberList";
 import AddMemberForm from "./Pages/AddMembers";
 import GeneralUser from "./Pages/GeneralUser";
 import MemberDetail from "./Pages/MemberDetail";
+import "react-toastify/dist/ReactToastify.css";
 
 function App() {
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(false);
 
   useEffect(() => {
-    let isLoggedIn = sessionStorage.getItem("isLogin");
+    let isLoggedIn = localStorage.getItem("isLogin");
     if (isLoggedIn) {
       setIsLogin(true);
       navigate("/dashboard");
@@ -25,7 +26,7 @@ function App() {
       navigate("/");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionStorage.getItem("isLogin")]);
+  }, [localStorage.getItem("isLogin")]);
   return (
     <div className="flex">
       {isLogin && <SideBar />}

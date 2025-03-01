@@ -52,7 +52,7 @@ exports.login = async (req, res) => {
 
       res
         .status(201)
-        .json({ message: "Logged in Successfully", success: true, gym });
+        .json({ message: "Logged in Successfully", success: true, gym, token });
     } else {
       res.status(400).json({ message: "Invalid credentials" });
     }

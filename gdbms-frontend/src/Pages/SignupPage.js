@@ -1,9 +1,13 @@
 import React, { useState } from "react";
 import signupImage from "../assets/Images/tom.png";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import { toast, ToastContainer } from "react-toastify";
 
 const SignupPage = () => {
   const navigate = useNavigate();
+  const gymRoute = process.env.REACT_APP_GYM_ROUTE;
+  const [isButtonDisabled, setIsButtonDisabled] = useState(false);
   const [signupInfo, setSignupInfo] = useState({
     gymName: "",
     username: "",
@@ -14,8 +18,29 @@ const SignupPage = () => {
   const handleOnChange = (event, name) => {
     setSignupInfo({ ...signupInfo, [name]: event.target.value });
   };
-  const handleSignup = () => {
-    navigate("/");
+  const handleSignup = async () => {
+    if (isButtonDisabled) return; // Prevents multiple clicks
+
+    setIsButtonDisabled(true); // Disable button
+    try {
+      await axios.post(`${gymRoute}/register`, signupInfo).then((response) => {
+        const successMsg = response.data.message;
+        toast.success(successMsg);
+      });
+
+      // Delay navigation after 2 seconds
+      setTimeout(() => {
+        navigate("/");
+      }, 1000);
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Signup failed!");
+      console.error("Signup Error:", error.response?.data || error.message);
+    } finally {
+      // Re-enable button after 5 seconds
+      setTimeout(() => {
+        setIsButtonDisabled(false);
+      }, 5000);
+    }
   };
 
   return (
@@ -103,6 +128,7 @@ const SignupPage = () => {
           </div>
         </div>
       </div>
+      <ToastContainer />
     </div>
   );
 };

@@ -23,39 +23,45 @@ exports.getAllMember = async (req, res) => {
 
 exports.addMember = async (req, res) => {
   try {
-    const { name, address, phoneNumber, membership, joiningDate } = req.body;
+    const { name, address, phoneNumber, membership } = req.body;
+
     const member = await Member.findOne({ gym: req.gym._id, phoneNumber });
     if (member) {
       return res.status(409).json({
-        error: "A member has alrady been registered with this number",
+        error: "A member has already been registered with this number",
       });
     }
+
     const memberShip = await Membership.findOne({
       _id: membership,
       gym: req.gym._id,
     });
-    const membershipMonth = memberShip.months;
-    if (memberShip) {
-      let joinDate = new Date(joiningDate);
-      const nextBillDate = addMonthsToDate(membershipMonth, joinDate);
-      let newMember = new Member({
-        name,
-        phoneNumber,
-        address,
-        membership,
-        gym: req.gym._id,
-        lastPayment: joinDate,
-        nextBillDate,
-      });
-      await newMember.save();
-      res
-        .status(200)
-        .json({ message: "Member has been successfylly added", newMember });
-    } else {
+
+    if (!memberShip) {
       return res.status(409).json({
-        error: "No such membreship exists",
+        error: "No such membership exists",
       });
     }
+
+    const membershipMonth = memberShip.months; // The number of months in the membership
+    const today = new Date();
+    const nextBillDate = addMonthsToDate(membershipMonth, today);
+
+    const newMember = new Member({
+      name,
+      address,
+      phoneNumber,
+      membership,
+      gym: req.gym._id,
+      lastPayment: today,
+      nextBillDate,
+    });
+    await newMember.save();
+
+    res.status(200).json({
+      message: "Member has been successfully added",
+      newMember,
+    });
   } catch (err) {
     res.status(500).json({
       error: "Server Error",
@@ -206,12 +212,24 @@ exports.getMemberDetail = async (req, res) => {
     const member = await Member.findOne({ _id: id, gym: req.gym._id });
     if (!member) {
       return res.status(409).json({
-        error: "No such memebr found",
+        error: "No such member found",
       });
     }
+
+    // Fetch membership details to display the membership type
+    const membership = await Membership.findById(member.membership);
+
+    // Calculate the membership duration
+    const membershipType = `${membership.months} ${
+      membership.months === 1 ? "Month" : "Months"
+    }`;
+
     res.status(200).json({
-      message: "Member  Fetched",
-      member: member,
+      message: "Member Fetched",
+      member: {
+        ...member.toObject(),
+        membershipType, // Add membershipType to the member data
+      },
     });
   } catch (err) {
     console.log(err);

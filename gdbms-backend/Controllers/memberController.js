@@ -40,8 +40,8 @@ exports.addMember = async (req, res) => {
       const nextBillDate = addMonthsToDate(membershipMonth, joinDate);
       let newMember = new Member({
         name,
-        address,
         phoneNumber,
+        address,
         membership,
         gym: req.gym._id,
         lastPayment: joinDate,

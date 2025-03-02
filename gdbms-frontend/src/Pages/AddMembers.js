@@ -1,21 +1,42 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Select, Button, DatePicker } from "antd";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import dayjs from "dayjs";
+import axios from "axios";
 
-const AddMemberForm = ({ handleAddMember }) => {
+const AddMemberForm = () => {
   const [memberInfo, setMemberInfo] = useState({
     name: "",
     phoneNumber: "",
     address: "",
-    joinDate: dayjs(),
-    memberType: "1 Month",
+    joiningDate: dayjs(),
+    memberType: "",
   });
 
-  const membershipOptions = [
-    { label: "1 Month Membership", value: "1 Month" },
-    { label: "2 Month Membership", value: "2 Month" },
-    { label: "3 Month Membership", value: "3 Month" },
-  ];
+  const [membershipOptions, setMembershipOptions] = useState([]);
+
+  useEffect(() => {
+    const fetchMemberships = async () => {
+      try {
+        const response = await axios.get(
+          "http://localhost:4000/plans/get-membership",
+          { withCredentials: true }
+        );
+        const memberships = response.data.membership.map((m) => ({
+          label: `${m.months} Month Membership - $${m.price}`,
+          value: m._id, // Use membership ID here
+        }));
+        setMembershipOptions(memberships);
+      } catch (error) {
+        toast.error(
+          error.response?.data?.message || "Failed to load memberships"
+        );
+      }
+    };
+
+    fetchMemberships();
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -27,27 +48,45 @@ const AddMemberForm = ({ handleAddMember }) => {
   };
 
   const handleDateChange = (date) => {
-    setMemberInfo((prev) => ({ ...prev, joinDate: date }));
+    setMemberInfo((prev) => ({ ...prev, joiningDate: date }));
   };
 
-  const handleSubmit = () => {
-    const { name, phoneNumber, address, memberType } = memberInfo;
-    if (!name || !phoneNumber || !address || !memberType) {
-      return;
-    }
-    handleAddMember(memberInfo);
+  const handleSubmit = async () => {
+    try {
+      const { name, phoneNumber, address, memberType, joiningDate } =
+        memberInfo;
+      const memberData = {
+        name,
+        phoneNumber,
+        address,
+        membership: memberType, // Send the membership ID selected
+        joiningDate: joiningDate.format("YYYY-MM-DD"),
+      };
 
-    setMemberInfo({
-      name: "",
-      phoneNumber: "",
-      address: "",
-      joinDate: dayjs(),
-      memberType: "1 Month",
-    });
+      const response = await axios.post(
+        "http://localhost:4000/members/add-members",
+        memberData,
+        { withCredentials: true }
+      );
+      toast.success(response.data.message); // Success toast
+      setMemberInfo({
+        name: "",
+        phoneNumber: "",
+        address: "",
+        joiningDate: dayjs(),
+        memberType: "",
+      });
+    } catch (error) {
+      toast.error(
+        error.response.data.message ||
+          "A memebr with this number already exists"
+      ); // Error toast
+    }
   };
 
   return (
     <div className="flex items-center justify-center w-5/6 min-h-screen bg-gray-500 p-10">
+      <ToastContainer position="top-right" autoClose={3000} />
       <div className="w-full flex flex-col gap-6 max-w-2xl bg-gray-800 p-12 rounded-lg shadow-lg">
         <div className="w-full text-center">
           <h2 className="text-4xl font-semibold mb-2 text-white">
@@ -63,7 +102,7 @@ const AddMemberForm = ({ handleAddMember }) => {
           value={memberInfo.name}
           onChange={handleChange}
           placeholder="Name"
-          className="w-full text-white py-4 px-5 rounded-lg border border-gray-600 focus:outline-none focus:border-blue-500"
+          className="w-full text-black py-4 px-5 rounded-lg border border-gray-600 focus:outline-none focus:border-blue-500"
         />
         <input
           type="tel"
@@ -71,7 +110,7 @@ const AddMemberForm = ({ handleAddMember }) => {
           value={memberInfo.phoneNumber}
           onChange={handleChange}
           placeholder="Phone Number"
-          className="w-full text-white py-4 px-5 rounded-lg border border-gray-600 focus:outline-none focus:border-blue-500"
+          className="w-full text-black py-4 px-5 rounded-lg border border-gray-600 focus:outline-none focus:border-blue-500"
         />
         <input
           type="text"
@@ -79,20 +118,21 @@ const AddMemberForm = ({ handleAddMember }) => {
           value={memberInfo.address}
           onChange={handleChange}
           placeholder="Address"
-          className="w-full text-white py-4 px-5 rounded-lg border border-gray-600 focus:outline-none focus:border-blue-500"
+          className="w-full text-black py-4 px-5 rounded-lg border border-gray-600 focus:outline-none focus:border-blue-500"
         />
         <DatePicker
-          value={memberInfo.joinDate}
+          value={memberInfo.joiningDate}
           onChange={handleDateChange}
-          className="w-full  py-4 px-5 rounded-lg border border-gray-600 focus:outline-none focus:border-blue-500"
+          className="w-full py-4 px-5 rounded-lg border border-gray-600 focus:outline-none focus:border-blue-500"
         />
         <Select
           placeholder="Select Membership Type"
           options={membershipOptions}
           value={memberInfo.memberType}
           onChange={handleSelectChange}
-          className="w-full bg-gray-700 text-white rounded-lg"
-          dropdownStyle={{ backgroundColor: "#1f2937", color: "white" }}
+          className="w-full bg-white text-black rounded-lg"
+          dropdownStyle={{ backgroundColor: "white", color: "black" }}
+          style={{ backgroundColor: "white", color: "black" }}
         />
         <Button
           type="primary"

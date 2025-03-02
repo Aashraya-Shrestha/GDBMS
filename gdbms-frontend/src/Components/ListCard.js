@@ -5,11 +5,8 @@ const ListCard = ({
   name,
   address,
   phoneNumber,
-  memberType,
-  joinDate,
   expireDate,
   memberDetail,
-  deleteMember,
 }) => {
   const ColStyles = {
     padding: 12,
@@ -28,8 +25,6 @@ const ListCard = ({
       <Col style={ColStyles}>{name}</Col>
       <Col style={ColStyles}>{address}</Col>
       <Col style={ColStyles}>{phoneNumber}</Col>
-      <Col style={ColStyles}>{memberType}</Col>
-      <Col style={ColStyles}>{joinDate}</Col>
       <Col style={ColStyles}>{expireDate}</Col>
       <Col style={ColStyles}>
         <Button onClick={memberDetail}>View</Button>

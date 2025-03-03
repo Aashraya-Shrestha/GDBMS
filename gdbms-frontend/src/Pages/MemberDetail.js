@@ -11,6 +11,10 @@ import {
 } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
+import { toast, ToastContainer } from "react-toastify"; // Import the toast library
+
+// Ensure you import the CSS for toastify
+import "react-toastify/dist/ReactToastify.css";
 
 const { Option } = Select;
 
@@ -21,6 +25,10 @@ const MemberDetail = () => {
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [member, setMember] = useState(null); // State for storing member details
   const [membershipOptions, setMembershipOptions] = useState([]); // State for membership options
+  const [editedName, setEditedName] = useState("");
+  const [editedPhone, setEditedPhone] = useState("");
+  const [editedAddress, setEditedAddress] = useState("");
+
   const navigate = useNavigate();
   const { id } = useParams(); // Get the member ID from the URL
 
@@ -71,25 +79,38 @@ const MemberDetail = () => {
   const handleSave = async () => {
     try {
       const response = await axios.post(
-        "http://localhost:4000/members/renew-membership",
+        `http://localhost:4000/members/updatePlan/${id}`,
         { memberId: id, membership: membershipType },
         { withCredentials: true }
       );
-      setIsRenewing(false);
-      setStatus(true); // Assuming status is active after renewal
-      alert(response.data.message); // Show success message
+
+      // Show success toast notification
+      toast.success("Membership has been renewed");
+
+      setTimeout(() => {
+        navigate("/memberList"); // Redirect to member list page after toast message
+      }, 2000);
     } catch (error) {
       console.error("Error renewing membership:", error);
-      alert("Failed to renew membership");
+      // Show error toast notification
+      toast.error("Failed to renew membership", {
+        position: "top-right",
+        autoClose: 2000, // Auto close after 5 seconds
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
     }
   };
-
   const showEditModal = () => {
+    if (member) {
+      setEditedName(member.name);
+      setEditedPhone(member.phoneNumber);
+      setEditedAddress(member.address);
+    }
     setIsEditModalVisible(true);
-  };
-
-  const handleEditOk = () => {
-    setIsEditModalVisible(false);
   };
 
   const handleEditCancel = () => {
@@ -98,6 +119,51 @@ const MemberDetail = () => {
 
   const goToMemberList = () => {
     navigate("/memberList");
+  };
+
+  const handleStatusChange = async (checked) => {
+    try {
+      const response = await axios.put(
+        `http://localhost:4000/members/changeStatus/${id}`,
+        { status: checked ? "Active" : "Inactive" }, // Send new status
+        { withCredentials: true }
+      );
+
+      // Show success toast notification
+      toast.success("Status updated successfully");
+      setStatus(checked); // Update local state
+    } catch (error) {
+      console.error("Error updating status:", error);
+      toast.error("Failed to update status");
+    }
+  };
+
+  const handleEditSave = async () => {
+    try {
+      const response = await axios.put(
+        `http://localhost:4000/members/editMember/${id}`,
+        {
+          name: editedName,
+          phoneNumber: editedPhone,
+          address: editedAddress,
+        },
+        { withCredentials: true }
+      );
+
+      // Update the local state with the edited values
+      setMember({
+        ...member,
+        name: editedName,
+        phoneNumber: editedPhone,
+        address: editedAddress,
+      });
+
+      toast.success("Member details updated successfully");
+      setIsEditModalVisible(false); // Close the modal
+    } catch (error) {
+      console.error("Error updating member details:", error);
+      toast.error("Failed to update member details");
+    }
   };
 
   if (!member) {
@@ -133,7 +199,8 @@ const MemberDetail = () => {
 
             <div className="flex items-center gap-2 mt-4">
               <span className="text-xl">Status:</span>
-              <Switch checked={status} onChange={() => setStatus(!status)} />
+              <Switch checked={status} onChange={handleStatusChange} />
+
               <span className="text-xl">{status ? "Active" : "Inactive"}</span>
             </div>
           </div>
@@ -197,23 +264,33 @@ const MemberDetail = () => {
         <Modal
           title="Edit Member Details"
           open={isEditModalVisible}
-          onOk={handleEditOk}
+          onOk={handleEditSave}
           onCancel={handleEditCancel}
           okText="Save"
         >
           <Form layout="vertical">
             <Form.Item label="Name">
-              <Input defaultValue={member.name} />
+              <Input
+                value={editedName}
+                onChange={(e) => setEditedName(e.target.value)}
+              />
             </Form.Item>
             <Form.Item label="Address">
-              <Input defaultValue={member.address} />
+              <Input
+                value={editedAddress}
+                onChange={(e) => setEditedAddress(e.target.value)}
+              />
             </Form.Item>
             <Form.Item label="Phone">
-              <Input defaultValue={member.phoneNumber} />
+              <Input
+                value={editedPhone}
+                onChange={(e) => setEditedPhone(e.target.value)}
+              />
             </Form.Item>
           </Form>
         </Modal>
       </Card>
+      <ToastContainer />
     </div>
   );
 };

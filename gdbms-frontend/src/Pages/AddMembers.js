@@ -50,7 +50,6 @@ const AddMemberForm = () => {
   const handleDateChange = (date) => {
     setMemberInfo((prev) => ({ ...prev, joiningDate: date }));
   };
-
   const handleSubmit = async () => {
     try {
       const { name, phoneNumber, address, memberType, joiningDate } =
@@ -59,8 +58,10 @@ const AddMemberForm = () => {
         name,
         phoneNumber,
         address,
-        membership: memberType, // Send the membership ID selected
-        joiningDate: joiningDate.format("YYYY-MM-DD"),
+        membership: memberType,
+        joiningDate: joiningDate
+          ? dayjs(joiningDate).toISOString()
+          : dayjs().toISOString(), // Send in ISO format
       };
 
       const response = await axios.post(
@@ -68,19 +69,20 @@ const AddMemberForm = () => {
         memberData,
         { withCredentials: true }
       );
-      toast.success(response.data.message); // Success toast
+      toast.success(response.data.message);
+
       setMemberInfo({
         name: "",
         phoneNumber: "",
         address: "",
-        joiningDate: dayjs(),
+        joiningDate: dayjs(), // Reset after success
         memberType: "",
       });
     } catch (error) {
       toast.error(
-        error.response.data.message ||
-          "A memebr with this number already exists"
-      ); // Error toast
+        error.response?.data?.message ||
+          "A member with this number already exists"
+      );
     }
   };
 

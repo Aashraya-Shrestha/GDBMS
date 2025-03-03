@@ -1,69 +1,53 @@
 import React, { useEffect, useState } from "react";
-import { Row, Col, Input, Button } from "antd";
+import { Row, Col, Input } from "antd";
 import ListCard from "../Components/ListCard";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
-const dummyMembers = [
-  {
-    _id: "1",
-    name: "John Doe",
-    address: "NewYork",
-    phoneNumber: "123-456-7890",
-    memberType: "2 month",
-    joinDate: "2023-05-20",
-    expireDate: "2023-08-20",
-  },
-  {
-    _id: "2",
-    name: "Jane Smith",
-    address: "Jawalakhel",
-    phoneNumber: "987-654-3210",
-    memberType: "1 month",
-    joinDate: "2022-11-15",
-    expireDate: "2022-12-15",
-  },
-];
-
-const ColStyles = {
-  padding: "10px",
-  borderLeft: "1px solid white",
-  textAlign: "center",
-};
-
-const GeneralUser = ({ members = dummyMembers }) => {
+const GeneralUser = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [header, setHeader] = useState("General Users");
+  const [members, setMembers] = useState([]);
 
   useEffect(() => {
     const func = sessionStorage.getItem("func");
     functionCall(func);
+    fetchMembers(func);
   }, []);
 
   const functionCall = (func) => {
-    switch (func) {
-      case "monthly":
-        setHeader("Joined this month");
-        break;
-      case "threeDays":
-        setHeader("Expiring within three days");
-        break;
-      case "thisWeek":
-        setHeader("Expiring within this week");
-        break;
-      case "expired":
-        setHeader("Expired Memberships");
-        break;
-      case "inactive":
-        setHeader("Inactive Memberships");
-        break;
-      default:
-        setHeader("General Users");
+    const headers = {
+      monthly: "Joined This Month",
+      threeDays: "Expiring Within Three Days",
+      thisWeek: "Expiring Within This Week",
+      expired: "Expired Memberships",
+      inactive: "Inactive Memberships",
+    };
+    setHeader(headers[func] || "General Users");
+  };
+
+  const fetchMembers = async (func) => {
+    const endpoints = {
+      monthly: "http://localhost:4000/members/monthly-members",
+      threeDays: "http://localhost:4000/members/expiring-within-3-days",
+      thisWeek: "http://localhost:4000/members/expiring-within-4to7-days",
+      expired: "http://localhost:4000/members/expiredMemberships",
+      inactive: "http://localhost:4000/members/inactiveMembers",
+    };
+
+    const endpoint =
+      endpoints[func] || "http://localhost:4000/members/all-members";
+    try {
+      const response = await axios.get(endpoint, { withCredentials: true });
+      setMembers(response.data.members);
+    } catch (error) {
+      console.error("Error fetching members:", error);
     }
   };
 
-  const handleViewMember = () => {
-    navigate("/member/123");
+  const handleViewMember = (id) => {
+    navigate(`/member/${id}`);
   };
 
   const filteredMembers = members.filter((member) =>
@@ -73,50 +57,55 @@ const GeneralUser = ({ members = dummyMembers }) => {
   );
 
   return (
-    <div className="flex-1 flex-row bg-slate-100 px-4">
-      <h1 className="text-black text-3xl my-5 font-semibold">{header}</h1>
-      <div className="flex gap-4 mb-4">
+    <div className="flex-1 bg-slate-100 px-6 py-4">
+      <h1 className="text-black text-3xl font-semibold mb-6 text-center">
+        {header}
+      </h1>
+      <div className="flex justify-center mb-6">
         <Input
           placeholder="Search members..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          style={{ width: "60%" }}
+          style={{ width: "50%", padding: "10px" }}
         />
       </div>
-      <Row className="bg-gray-800 text-white font-bold p-2">
-        {[
-          "Index",
-          "Member Name",
-          "Address",
-          "Phone Number",
-          "Membership Type",
-          "Join Date",
-          "Expiring Date",
-          "Member Details",
-        ].map((header, index) => (
-          <Col key={index} span={3} style={ColStyles}>
-            {header}
-          </Col>
-        ))}
-      </Row>
-
-      {filteredMembers.length > 0 ? (
-        filteredMembers.map((item, index) => (
-          <ListCard
-            key={item._id}
-            index={index}
-            name={item.name}
-            address={item.address}
-            phoneNumber={item.phoneNumber}
-            memberType={item.memberType}
-            joinDate={new Date(item.joinDate).toLocaleDateString()}
-            expireDate={item.expireDate}
-            memberDetail={() => handleViewMember(item._id)}
-          />
-        ))
-      ) : (
-        <p className="text-center mt-4">No members available</p>
-      )}
+      <div className="bg-gray-800 text-white font-bold text-lg rounded-t-md overflow-hidden">
+        <Row className="p-3 text-center gap-14">
+          {[
+            "Index",
+            "Member Name",
+            "Address",
+            "Phone Number",
+            "Expiring Date",
+            "Details",
+          ].map((header, index) => (
+            <Col
+              key={index}
+              span={3}
+              className="px-2 py-1 border-r last:border-r-0"
+            >
+              {header}
+            </Col>
+          ))}
+        </Row>
+      </div>
+      <div className="bg-white divide-y divide-gray-300 rounded-b-md">
+        {filteredMembers.length > 0 ? (
+          filteredMembers.map((item, index) => (
+            <ListCard
+              key={item._id}
+              index={index + 1} // Start index from 1
+              name={item.name}
+              address={item.address}
+              phoneNumber={item.phoneNumber}
+              expireDate={new Date(item.expireDate).toLocaleDateString()}
+              memberDetail={() => handleViewMember(item._id)}
+            />
+          ))
+        ) : (
+          <p className="text-center py-4">No members available</p>
+        )}
+      </div>
     </div>
   );
 };

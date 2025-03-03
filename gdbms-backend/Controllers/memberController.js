@@ -270,29 +270,77 @@ exports.changeStatus = async (req, res) => {
 
 exports.updateMemberPlan = async (req, res) => {
   try {
-    const { membership } = req.body;
-    const { id } = req.params;
-    const memebrship = await Membership.findOne({
+    const { membership } = req.body; // Membership ID that is selected for renewal
+    const { id } = req.params; // Member ID
+
+    const membershipData = await Membership.findOne({
       gym: req.gym._id,
-      _id: memebrship,
+      _id: membership, // Check if the membership exists
     });
 
-    if (membership) {
-      let getMonth = membership.months;
-      let today = new Date();
-      let nextBillDate = addMonthsToDate(getMonth, today);
-      const member = await Member.findOne({ gym: req.gym._id, _id: id });
-      if (!member) {
-        return res.status(409).json({ error: "No such member found" });
-      }
-      member.nextBillDate = nextBillDate;
-      member.lastPayment = today;
-      await member.save();
-
-      res.status(200).json({ message: "Member renewed successfully" });
-    } else {
-      return res.status(409).json({ message: "No membership found" });
+    if (!membershipData) {
+      return res.status(409).json({ error: "No such membership found" });
     }
+
+    const months = membershipData.months; // Get the number of months from the membership
+    const today = new Date();
+    const nextBillDate = addMonthsToDate(months, today); // Calculate the next billing date
+
+    const member = await Member.findOne({ gym: req.gym._id, _id: id });
+    if (!member) {
+      return res.status(409).json({ error: "No such member found" });
+    }
+
+    // Update the member's nextBillDate and lastPayment
+    member.nextBillDate = nextBillDate;
+    member.lastPayment = today;
+    member.membership = membership; // Update membership plan
+    await member.save();
+
+    res.status(200).json({ message: "Member renewed successfully" });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({
+      error: "Server Error",
+      details: err.message,
+    });
+  }
+};
+
+exports.editMember = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, phoneNumber, address } = req.body;
+
+    const member = await Member.findOne({ _id: id, gym: req.gym._id });
+    if (!member) {
+      return res.status(404).json({ error: "No such member found" });
+    }
+
+    // Check if the new phone number is already taken by another member
+    if (phoneNumber && phoneNumber !== member.phoneNumber) {
+      const existingMember = await Member.findOne({
+        gym: req.gym._id,
+        phoneNumber,
+      });
+      if (existingMember) {
+        return res
+          .status(409)
+          .json({ error: "A member with this phone number already exists" });
+      }
+    }
+
+    // Update the member's details
+    member.name = name || member.name;
+    member.phoneNumber = phoneNumber || member.phoneNumber;
+    member.address = address || member.address;
+
+    await member.save();
+
+    res.status(200).json({
+      message: "Member details updated successfully",
+      member,
+    });
   } catch (err) {
     console.log(err);
     res.status(500).json({

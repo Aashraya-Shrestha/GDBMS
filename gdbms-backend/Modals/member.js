@@ -44,7 +44,9 @@ const memebrSchema = mongoose.Schema(
       required: true,
     },
   },
-  {}
+  {
+    timestamps: true, // This adds createdAt and updatedAt
+  }
 );
 
 const memberModal = mongoose.model("members", memebrSchema);

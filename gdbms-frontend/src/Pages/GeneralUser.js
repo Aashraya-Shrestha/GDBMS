@@ -98,7 +98,11 @@ const GeneralUser = () => {
               name={item.name}
               address={item.address}
               phoneNumber={item.phoneNumber}
-              expireDate={new Date(item.expireDate).toLocaleDateString()}
+              expireDate={
+                item.nextBillDate
+                  ? new Date(item.nextBillDate).toLocaleDateString("en-GB")
+                  : "N/A"
+              }
               memberDetail={() => handleViewMember(item._id)}
             />
           ))

@@ -11,6 +11,9 @@ import AddMemberForm from "./Pages/AddMembers";
 import GeneralUser from "./Pages/GeneralUser";
 import MemberDetail from "./Pages/MemberDetail";
 import "react-toastify/dist/ReactToastify.css";
+import StatsPage from "./Components/StatsPage";
+import ProfilePage from "./Pages/Profile";
+import { ToastContainer } from "react-toastify";
 
 function App() {
   const navigate = useNavigate();
@@ -27,19 +30,24 @@ function App() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [localStorage.getItem("isLogin")]);
-  return (
-    <div className="flex">
-      {isLogin && <SideBar />}
 
-      <Routes>
-        <Route path="/" element={<LoginPage />} />
-        <Route path="/signup" element={<SignupPage />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/memberList" element={<MemberList />} />
-        <Route path="/addMember" element={<AddMemberForm />} />
-        <Route path="/specific/:page" element={<GeneralUser />} />
-        <Route path="/member/:id" element={<MemberDetail />} />
-      </Routes>
+  return (
+    <div className="App">
+      {isLogin && <SideBar className="sidebar" />}
+      <div className="main-content">
+        <ToastContainer />
+        <Routes>
+          <Route path="/" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/memberList" element={<MemberList />} />
+          <Route path="/addMember" element={<AddMemberForm />} />
+          <Route path="/specific/:page" element={<GeneralUser />} />
+          <Route path="/member/:id" element={<MemberDetail />} />
+          <Route path="/statsPage" element={<StatsPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+        </Routes>
+      </div>
     </div>
   );
 }

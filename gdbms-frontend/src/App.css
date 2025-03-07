@@ -2,4 +2,24 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  display: flex;
+}
+
+/* Sidebar styling */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh; /* Full height of the viewport */
+  width: 250px; /* Adjust the width as needed */
+  overflow-y: auto; /* Allow scrolling within the sidebar if needed */
+  z-index: 1000; /* Ensure the sidebar is above other content */
+}
+
+/* Main content area */
+.main-content {
+  margin-left: 250px; /* Same as the width of the sidebar */
+  width: calc(100% - 250px); /* Adjust the width to account for the sidebar */
+  overflow-y: auto; /* Allow scrolling within the main content */
+  height: 100vh; /* Full height of the viewport */
 }

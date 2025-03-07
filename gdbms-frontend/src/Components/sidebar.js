@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   DesktopOutlined,
   PieChartOutlined,
@@ -8,8 +8,7 @@ import {
 } from "@ant-design/icons";
 import { useLocation, useNavigate } from "react-router-dom";
 
-const SideBar = () => {
-  const [collapsed, setCollapsed] = useState(false);
+const SideBar = ({ className }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const currentPath = location.pathname;
@@ -18,7 +17,7 @@ const SideBar = () => {
     { label: "Dashboard", path: "/dashboard", icon: <PieChartOutlined /> },
     { label: "Add Members", path: "/addMember", icon: <DesktopOutlined /> },
     { label: "Member List", path: "/memberList", icon: <TeamOutlined /> },
-    { label: "Profile", path: "/profileScreen", icon: <UserOutlined /> },
+    { label: "Profile", path: "/profile", icon: <UserOutlined /> },
   ];
 
   const handleLogout = async () => {
@@ -28,13 +27,11 @@ const SideBar = () => {
 
   return (
     <div
-      className={`h-screen bg-gray-900 text-white ${
-        collapsed ? "w-16" : "w-1/6"
-      } transition-all duration-300 flex flex-col`}
+      className={`${className} bg-gray-900 text-white w-1/6 flex flex-col min-h-screen`}
     >
       {/* Sidebar Header */}
       <div className="p-4 text-center mh-4 text-lg font-bold border-b border-gray-700">
-        {collapsed ? "G." : "G. Fitness"}
+        G. Fitness
       </div>
 
       {/* Sidebar Menu */}
@@ -48,28 +45,20 @@ const SideBar = () => {
             onClick={() => navigate(item.path)}
           >
             <span className="text-xl">{item.icon}</span>
-            {!collapsed && <span className="text-sm">{item.label}</span>}
+            <span className="text-sm">{item.label}</span>
           </button>
         ))}
       </nav>
 
       {/* Logout Button */}
       <button
-        className="flex items-center gap-4 px-4 py-3 text-left hover:bg-red-700 transition-all mt-auto bg-gray-700"
+        className="flex items-center gap-4 px-4 py-3 text-left hover:bg-red-700 transition-all bg-gray-700"
         onClick={handleLogout}
       >
         <span className="text-xl text-red-400">
           <LogoutOutlined />
         </span>
-        {!collapsed && <span className="text-sm text-red-400">Logout</span>}
-      </button>
-
-      {/* Collapse Button */}
-      <button
-        className="p-3 bg-gray-800 text-center hover:bg-gray-700"
-        onClick={() => setCollapsed(!collapsed)}
-      >
-        {collapsed ? "»" : "«"}
+        <span className="text-sm text-red-400">Logout</span>
       </button>
     </div>
   );

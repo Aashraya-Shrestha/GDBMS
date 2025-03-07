@@ -38,13 +38,13 @@ const Dashboard = () => {
     {
       title: "Expired Memberships",
       ImageIcon: ReportIcon,
-      path: "/specific/expired",
+      path: "/specific/expiredMemberships",
       value: "expired",
     },
     {
       title: "Inactive Members",
       ImageIcon: SevereColdIcon,
-      path: "/specific/inactive",
+      path: "/specific/inactiveMembers",
       value: "inactive",
     },
   ];
@@ -61,8 +61,12 @@ const Dashboard = () => {
     sessionStorage.setItem("func", value);
   };
 
+  const goToStatsPage = () => {
+    navigate("/statsPage"); // This navigates to the stats page
+  };
+
   return (
-    <div className="w-5/6 text-black p-5 relative">
+    <div className="w-[100%] text-black p-5 relative min-h-screen flex flex-col">
       {/* Header Section */}
       <div className="w-full bg-slate-800 text-white rounded-lg flex p-3 justify-between items-center">
         <div className="font-normal text-xl">Hello Admin!</div>
@@ -72,7 +76,7 @@ const Dashboard = () => {
       </div>
 
       {/* Cards Section (3 Per Row) */}
-      <Row gutter={[16, 16]} className="mt-4">
+      <Row gutter={[16, 16]} className="mt-4 flex-1">
         {cardData.map((card, index) => (
           <CardComponent
             key={index}
@@ -85,7 +89,18 @@ const Dashboard = () => {
         ))}
       </Row>
 
-      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 w-full md:w-auto text-black text-center border rounded-lg p-3 bg-white shadow-md">
+      {/* Stats Button */}
+      <div className="mt-4 text-center">
+        <button
+          onClick={goToStatsPage}
+          className="bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition-all"
+        >
+          Go to Stats Page
+        </button>
+      </div>
+
+      {/* Footer Section */}
+      <div className="mt-4 text-center border rounded-lg p-3 bg-white shadow-md">
         Contact us at: 98735456732 for any inquiries
       </div>
     </div>

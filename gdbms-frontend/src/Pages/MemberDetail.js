@@ -11,26 +11,24 @@ import {
 } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
-import { toast, ToastContainer } from "react-toastify"; // Import the toast library
-
-// Ensure you import the CSS for toastify
+import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 const { Option } = Select;
 
 const MemberDetail = () => {
-  const [status, setStatus] = useState(true);
+  const [status, setStatus] = useState(true); // Default to true (Active)
   const [isRenewing, setIsRenewing] = useState(false);
   const [membershipType, setMembershipType] = useState(null);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
-  const [member, setMember] = useState(null); // State for storing member details
-  const [membershipOptions, setMembershipOptions] = useState([]); // State for membership options
+  const [member, setMember] = useState(null);
+  const [membershipOptions, setMembershipOptions] = useState([]);
   const [editedName, setEditedName] = useState("");
   const [editedPhone, setEditedPhone] = useState("");
   const [editedAddress, setEditedAddress] = useState("");
 
   const navigate = useNavigate();
-  const { id } = useParams(); // Get the member ID from the URL
+  const { id } = useParams();
 
   useEffect(() => {
     const fetchMemberDetails = async () => {
@@ -39,14 +37,15 @@ const MemberDetail = () => {
           `http://localhost:4000/members/member-detail/${id}`,
           { withCredentials: true }
         );
-        setMember(response.data.member); // Set member data from API response
-        setStatus(response.data.status); // Set the status (active or inactive)
+        setMember(response.data.member);
+        // Set the status based on the member's status from the backend
+        setStatus(response.data.member.status === "Active");
       } catch (error) {
         console.error("Error fetching member details:", error);
       }
     };
     fetchMemberDetails();
-  }, [id]); // Re-fetch when the memberId changes
+  }, [id]);
 
   useEffect(() => {
     const fetchMemberships = async () => {
@@ -57,16 +56,16 @@ const MemberDetail = () => {
         );
         const memberships = response.data.membership.map((m) => ({
           label: `${m.months} Month Membership - ${m.price}`,
-          value: m._id, // Use membership ID here
+          value: m._id,
         }));
-        setMembershipOptions(memberships); // Set membership options
+        setMembershipOptions(memberships);
       } catch (error) {
         console.error("Error fetching membership options:", error);
       }
     };
 
     fetchMemberships();
-  }, []); // Fetch memberships only once
+  }, []);
 
   const handleRenewClick = () => {
     if (status) setIsRenewing(true);
@@ -84,18 +83,16 @@ const MemberDetail = () => {
         { withCredentials: true }
       );
 
-      // Show success toast notification
       toast.success("Membership has been renewed");
 
       setTimeout(() => {
-        navigate("/memberList"); // Redirect to member list page after toast message
+        navigate("/memberList");
       }, 2000);
     } catch (error) {
       console.error("Error renewing membership:", error);
-      // Show error toast notification
       toast.error("Failed to renew membership", {
         position: "top-right",
-        autoClose: 2000, // Auto close after 5 seconds
+        autoClose: 2000,
         hideProgressBar: false,
         closeOnClick: true,
         pauseOnHover: true,
@@ -104,6 +101,7 @@ const MemberDetail = () => {
       });
     }
   };
+
   const showEditModal = () => {
     if (member) {
       setEditedName(member.name);
@@ -123,13 +121,13 @@ const MemberDetail = () => {
 
   const handleStatusChange = async (checked) => {
     try {
+      const newStatus = checked ? "Active" : "Inactive";
       const response = await axios.put(
         `http://localhost:4000/members/changeStatus/${id}`,
-        { status: checked ? "Active" : "Inactive" }, // Send new status
+        { status: newStatus },
         { withCredentials: true }
       );
 
-      // Show success toast notification
       toast.success("Status updated successfully");
       setStatus(checked); // Update local state
     } catch (error) {
@@ -150,7 +148,6 @@ const MemberDetail = () => {
         { withCredentials: true }
       );
 
-      // Update the local state with the edited values
       setMember({
         ...member,
         name: editedName,
@@ -159,7 +156,7 @@ const MemberDetail = () => {
       });
 
       toast.success("Member details updated successfully");
-      setIsEditModalVisible(false); // Close the modal
+      setIsEditModalVisible(false);
     } catch (error) {
       console.error("Error updating member details:", error);
       toast.error("Failed to update member details");
@@ -167,7 +164,7 @@ const MemberDetail = () => {
   };
 
   if (!member) {
-    return <div>Loading...</div>; // Render loading state while member data is being fetched
+    return <div>Loading...</div>;
   }
 
   return (
@@ -200,7 +197,6 @@ const MemberDetail = () => {
             <div className="flex items-center gap-2 mt-4">
               <span className="text-xl">Status:</span>
               <Switch checked={status} onChange={handleStatusChange} />
-
               <span className="text-xl">{status ? "Active" : "Inactive"}</span>
             </div>
           </div>
@@ -232,9 +228,9 @@ const MemberDetail = () => {
               <Select
                 placeholder="Select Membership Type"
                 style={{
-                  width: 300, // Making the select box bigger
-                  display: "flex", // Align label and price using flex
-                  justifyContent: "space-between", // Ensures both label and price are shown clearly
+                  width: 300,
+                  display: "flex",
+                  justifyContent: "space-between",
                 }}
                 onChange={handleMembershipChange}
                 size="large"

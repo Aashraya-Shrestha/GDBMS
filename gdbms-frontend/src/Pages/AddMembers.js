@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Select, Button, DatePicker } from "antd";
+import { Select, Button } from "antd";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import dayjs from "dayjs";
@@ -11,7 +11,7 @@ const AddMemberForm = () => {
     phoneNumber: "",
     address: "",
     joiningDate: dayjs(),
-    memberType: "",
+    memberType: "Add membership type",
   });
 
   const [membershipOptions, setMembershipOptions] = useState([]);
@@ -47,21 +47,14 @@ const AddMemberForm = () => {
     setMemberInfo((prev) => ({ ...prev, memberType: value }));
   };
 
-  const handleDateChange = (date) => {
-    setMemberInfo((prev) => ({ ...prev, joiningDate: date }));
-  };
   const handleSubmit = async () => {
     try {
-      const { name, phoneNumber, address, memberType, joiningDate } =
-        memberInfo;
+      const { name, phoneNumber, address, memberType } = memberInfo;
       const memberData = {
         name,
         phoneNumber,
         address,
         membership: memberType,
-        joiningDate: joiningDate
-          ? dayjs(joiningDate).toISOString()
-          : dayjs().toISOString(), // Send in ISO format
       };
 
       const response = await axios.post(
@@ -75,7 +68,6 @@ const AddMemberForm = () => {
         name: "",
         phoneNumber: "",
         address: "",
-        joiningDate: dayjs(), // Reset after success
         memberType: "",
       });
     } catch (error) {
@@ -87,63 +79,80 @@ const AddMemberForm = () => {
   };
 
   return (
-    <div className="flex items-center justify-center w-5/6 min-h-screen bg-gray-500 p-10">
+    <div className="flex items-center justify-center w-full min-h-screen bg-gray-100 p-6">
       <ToastContainer position="top-right" autoClose={3000} />
-      <div className="w-full flex flex-col gap-6 max-w-2xl bg-gray-800 p-12 rounded-lg shadow-lg">
+      <div className="w-full flex flex-col gap-6 max-w-2xl bg-white p-8 rounded-lg shadow-md">
         <div className="w-full text-center">
-          <h2 className="text-4xl font-semibold mb-2 text-white">
+          <h2 className="text-3xl font-bold mb-2 text-gray-800">
             Add a Member
           </h2>
-          <p className="text-md text-gray-400">
-            Please enter the member details
+          <p className="text-sm text-gray-600">
+            Please enter the member details below.
           </p>
         </div>
-        <input
-          type="text"
-          name="name"
-          value={memberInfo.name}
-          onChange={handleChange}
-          placeholder="Name"
-          className="w-full text-black py-4 px-5 rounded-lg border border-gray-600 focus:outline-none focus:border-blue-500"
-        />
-        <input
-          type="tel"
-          name="phoneNumber"
-          value={memberInfo.phoneNumber}
-          onChange={handleChange}
-          placeholder="Phone Number"
-          className="w-full text-black py-4 px-5 rounded-lg border border-gray-600 focus:outline-none focus:border-blue-500"
-        />
-        <input
-          type="text"
-          name="address"
-          value={memberInfo.address}
-          onChange={handleChange}
-          placeholder="Address"
-          className="w-full text-black py-4 px-5 rounded-lg border border-gray-600 focus:outline-none focus:border-blue-500"
-        />
-        <DatePicker
-          value={memberInfo.joiningDate}
-          onChange={handleDateChange}
-          className="w-full py-4 px-5 rounded-lg border border-gray-600 focus:outline-none focus:border-blue-500"
-        />
-        <Select
-          placeholder="Select Membership Type"
-          options={membershipOptions}
-          value={memberInfo.memberType}
-          onChange={handleSelectChange}
-          className="w-full bg-white text-black rounded-lg"
-          dropdownStyle={{ backgroundColor: "white", color: "black" }}
-          style={{ backgroundColor: "white", color: "black" }}
-        />
+
+        {/* Name Input */}
+        <div className="flex flex-col gap-2">
+          <label className="text-sm font-medium text-gray-700">Name</label>
+          <input
+            type="text"
+            name="name"
+            value={memberInfo.name}
+            onChange={handleChange}
+            placeholder="Enter full name"
+            className="w-full py-2 px-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        {/* Phone Number Input */}
+        <div className="flex flex-col gap-2">
+          <label className="text-sm font-medium text-gray-700">
+            Phone Number
+          </label>
+          <input
+            type="tel"
+            name="phoneNumber"
+            value={memberInfo.phoneNumber}
+            onChange={handleChange}
+            placeholder="Enter phone number"
+            className="w-full py-2 px-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        {/* Address Input */}
+        <div className="flex flex-col gap-2">
+          <label className="text-sm font-medium text-gray-700">Address</label>
+          <input
+            type="text"
+            name="address"
+            value={memberInfo.address}
+            onChange={handleChange}
+            placeholder="Enter address"
+            className="w-full py-2 px-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        {/* Membership Type Select */}
+        <div className="flex flex-col gap-2">
+          <label className="text-sm font-medium text-gray-700">
+            Membership Type
+          </label>
+          <Select
+            placeholder="Select membership type"
+            options={membershipOptions}
+            value={memberInfo.memberType}
+            onChange={handleSelectChange}
+            className="w-full"
+            dropdownStyle={{ backgroundColor: "white" }}
+            style={{ width: "100%" }}
+          />
+        </div>
+
+        {/* Submit Button */}
         <Button
           type="primary"
           onClick={handleSubmit}
-          style={{
-            width: "100%",
-            backgroundColor: "#2563eb",
-            borderColor: "#2563eb",
-          }}
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200"
         >
           Add Member
         </Button>

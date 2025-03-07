@@ -188,7 +188,7 @@ exports.expiredMemberships = async (req, res) => {
 
 exports.inactiveMembers = async (req, res) => {
   try {
-    const member = await Member.find({ gym: req.gym._id, status: "pending" });
+    const member = await Member.find({ gym: req.gym._id, status: "Inactive" });
 
     res.status(200).json({
       message: member.length

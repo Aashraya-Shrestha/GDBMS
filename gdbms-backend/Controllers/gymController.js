@@ -1,11 +1,11 @@
 const Gym = require("../Modals/gym");
 const bcrypt = require("bcryptjs");
-const { error } = require("console");
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
 
+// Register a new gym
 exports.register = async (req, res) => {
   try {
     const { gymName, username, email, password } = req.body;
@@ -18,12 +18,16 @@ exports.register = async (req, res) => {
       });
     } else {
       const hashPassword = await bcrypt.hash(password, 10);
-      console.log(gymName, username, email, password);
-      newGym = new Gym({ gymName, username, email, password: hashPassword });
+      const newGym = new Gym({
+        gymName,
+        username,
+        email,
+        password: hashPassword,
+      });
       await newGym.save();
 
       res.status(201).json({
-        message: "Sucessfully Registered",
+        message: "Successfully Registered",
         success: "yes",
         data: newGym,
       });
@@ -35,7 +39,7 @@ exports.register = async (req, res) => {
     });
   }
 };
-
+// Login a gym
 const cookieOptions = {
   httpOnly: true,
   secure: false,
@@ -63,7 +67,7 @@ exports.login = async (req, res) => {
     });
   }
 };
-
+// Send OTP for password reset
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -71,7 +75,6 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASSWORD,
   },
 });
-
 exports.sendOTP = async (req, res) => {
   try {
     const { email } = req.body;
@@ -86,14 +89,14 @@ exports.sendOTP = async (req, res) => {
 
       await gym.save();
 
-      const maileOptions = {
+      const mailOptions = {
         from: "aashraya8@gmail.com",
         to: email,
         subject: "Password reset",
         text: `You have requested a password reset, your OTP is: ${token}`,
       };
 
-      transporter.sendMail(maileOptions, (error, info) => {
+      transporter.sendMail(mailOptions, (error, info) => {
         if (error) {
           res.status(500).json({ error: "Server Error", errMsg: error });
         } else {
@@ -110,7 +113,7 @@ exports.sendOTP = async (req, res) => {
     });
   }
 };
-
+// Check OTP for password reset
 exports.checkOTP = async (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -131,7 +134,7 @@ exports.checkOTP = async (req, res) => {
     });
   }
 };
-
+// Reset password
 exports.resetPassword = async (req, res) => {
   try {
     const { email, newPassword } = req.body;
@@ -156,9 +159,97 @@ exports.resetPassword = async (req, res) => {
     });
   }
 };
-
+// Logout a gym
 exports.logout = async (req, res) => {
   res
     .clearCookie("cookie_token", cookieOptions)
     .json({ message: "You have logged out successfully " });
+};
+
+// Get logged-in gym's details
+exports.getLoggedInGym = async (req, res) => {
+  try {
+    // Fetch the gym details using the gym ID from the request (set by the auth middleware)
+    const gym = await Gym.findById(req.gym._id).select("-password"); // Exclude the password field
+
+    if (!gym) {
+      return res.status(404).json({ error: "Gym not found" });
+    }
+
+    res.status(200).json({
+      message: "Gym details fetched successfully",
+      gym,
+    });
+  } catch (err) {
+    res.status(500).json({
+      error: "Server Error",
+      details: err.message,
+    });
+  }
+};
+
+// Edit logged-in gym's details
+exports.editLoggedInGym = async (req, res) => {
+  try {
+    const { gymName, username, email } = req.body;
+
+    // Find the logged-in gym using the gym ID from the request (set by the auth middleware)
+    const gym = await Gym.findById(req.gym._id);
+
+    if (!gym) {
+      return res.status(404).json({ error: "Gym not found" });
+    }
+
+    // Check if the new email is already taken by another gym
+    if (email && email !== gym.email) {
+      const existingGym = await Gym.findOne({ email });
+      if (existingGym) {
+        return res.status(409).json({ error: "Email is already in use" });
+      }
+    }
+
+    // Update the gym's details
+    gym.gymName = gymName || gym.gymName;
+    gym.username = username || gym.username;
+    gym.email = email || gym.email;
+
+    await gym.save();
+
+    res.status(200).json({
+      message: "Gym details updated successfully",
+      gym,
+    });
+  } catch (err) {
+    res.status(500).json({
+      error: "Server Error",
+      details: err.message,
+    });
+  }
+};
+
+// Delete logged-in gym's account
+exports.deleteLoggedInGym = async (req, res) => {
+  try {
+    // Find the logged-in gym using the gym ID from the request (set by the auth middleware)
+    const gym = await Gym.findById(req.gym._id);
+
+    if (!gym) {
+      return res.status(404).json({ error: "Gym not found" });
+    }
+
+    // Delete the gym's account
+    await Gym.findByIdAndDelete(req.gym._id);
+
+    // Clear the cookie (if using cookies for authentication)
+    res.clearCookie("cookie_token", cookieOptions);
+
+    res.status(200).json({
+      message: "Gym account deleted successfully",
+    });
+  } catch (err) {
+    res.status(500).json({
+      error: "Server Error",
+      details: err.message,
+    });
+  }
 };

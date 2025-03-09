@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Row, Col, Modal, Form, Input, Button } from "antd";
 import ListCard from "../Components/ListCard";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 
@@ -21,6 +21,10 @@ const MemberList = () => {
   });
   const [members, setMembers] = useState([]);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Check if the filter is set to "active"
+  const showActiveMembers = location.state?.filter === "active";
 
   useEffect(() => {
     const fetchMembers = async () => {
@@ -31,13 +35,17 @@ const MemberList = () => {
             withCredentials: true,
           }
         );
-        setMembers(response.data.members);
+        // Filter out inactive members if showActiveMembers is true
+        const filteredMembers = showActiveMembers
+          ? response.data.members.filter((member) => member.status === "Active")
+          : response.data.members;
+        setMembers(filteredMembers);
       } catch (error) {
         toast.error("Error fetching members");
       }
     };
     fetchMembers();
-  }, []);
+  }, [showActiveMembers]);
 
   const handleViewMember = (id) => {
     navigate(`/member/${id}`);
@@ -68,6 +76,7 @@ const MemberList = () => {
     }
   };
 
+  // Filter members based on search query
   const filteredMembers = members.filter((member) =>
     Object.values(member).some((value) =>
       value.toString().toLowerCase().includes(searchQuery.toLowerCase())
@@ -75,7 +84,7 @@ const MemberList = () => {
   );
 
   return (
-    <div className="flex-1 flex-row bg-slate-100 px-4">
+    <div className="flex-1 flex-row px-4">
       <h1 className="text-black text-3xl my-5 font-semibold">Member List</h1>
       <div style={{ display: "flex", gap: "10px", marginBottom: "16px" }}>
         <Input

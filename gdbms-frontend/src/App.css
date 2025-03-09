@@ -18,8 +18,13 @@
 
 /* Main content area */
 .main-content {
-  margin-left: 250px; /* Same as the width of the sidebar */
-  width: calc(100% - 250px); /* Adjust the width to account for the sidebar */
+  width: 100%; /* Full width by default */
   overflow-y: auto; /* Allow scrolling within the main content */
   height: 100vh; /* Full height of the viewport */
+}
+
+/* Add margin-left only when sidebar is visible */
+.main-content.with-sidebar {
+  margin-left: 250px; /* Same as the width of the sidebar */
+  width: calc(100% - 250px); /* Adjust the width to account for the sidebar */
 }

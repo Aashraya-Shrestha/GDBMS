@@ -14,6 +14,7 @@ import "react-toastify/dist/ReactToastify.css";
 import StatsPage from "./Components/StatsPage";
 import ProfilePage from "./Pages/Profile";
 import { ToastContainer } from "react-toastify";
+import LandingPage from "./Pages/LandingPage";
 
 function App() {
   const navigate = useNavigate();
@@ -34,10 +35,11 @@ function App() {
   return (
     <div className="App">
       {isLogin && <SideBar className="sidebar" />}
-      <div className="main-content">
+      <div className={`main-content ${isLogin ? "with-sidebar" : ""}`}>
         <ToastContainer />
         <Routes>
-          <Route path="/" element={<LoginPage />} />
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/memberList" element={<MemberList />} />

@@ -177,7 +177,6 @@ exports.getLoggedInGym = async (req, res) => {
     }
 
     res.status(200).json({
-      message: "Gym details fetched successfully",
       gym,
     });
   } catch (err) {
@@ -245,6 +244,42 @@ exports.deleteLoggedInGym = async (req, res) => {
 
     res.status(200).json({
       message: "Gym account deleted successfully",
+    });
+  } catch (err) {
+    res.status(500).json({
+      error: "Server Error",
+      details: err.message,
+    });
+  }
+};
+
+exports.sendContactMail = async (req, res) => {
+  try {
+    const { name, email, message } = req.body;
+
+    // Validate the input
+    if (!name || !email || !message) {
+      return res.status(400).json({ error: "All fields are required" });
+    }
+
+    // Create the mail options
+    const mailOptions = {
+      from: process.env.SENDER_EMAIL, // Sender's email address (authenticated email)
+      to: "aashraya8@gmail.com", // Recipient's email address
+      replyTo: email, // Reply-to address (user's email)
+      subject: `New Contact Message from ${name}`, // Subject line
+      text: `You have received a new message from ${name} (${email}):\n\n${message}`, // Email body
+    };
+
+    // Send the email
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        return res.status(500).json({ error: "Server Error", errMsg: error });
+      } else {
+        return res
+          .status(200)
+          .json({ message: "Your message has been sent successfully" });
+      }
     });
   } catch (err) {
     res.status(500).json({

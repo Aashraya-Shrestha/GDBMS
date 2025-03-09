@@ -4,6 +4,7 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import dayjs from "dayjs";
 import axios from "axios";
+import "../Styles/AddMemberForm.css"; // Import a CSS file for the floating shapes
 
 const AddMemberForm = () => {
   const [memberInfo, setMemberInfo] = useState({
@@ -79,9 +80,18 @@ const AddMemberForm = () => {
   };
 
   return (
-    <div className="flex items-center justify-center w-full min-h-screen bg-gray-100 p-6">
+    <div className="flex items-center justify-center w-full min-h-screen bg-gray-100 p-6 relative overflow-hidden">
+      {/* Floating Shapes */}
+      <div className="floating-shapes">
+        <div className="shape shape-1"></div>
+        <div className="shape shape-2"></div>
+        <div className="shape shape-3"></div>
+        <div className="shape shape-4"></div>
+        <div className="shape shape-5"></div>
+      </div>
+
       <ToastContainer position="top-right" autoClose={3000} />
-      <div className="w-full flex flex-col gap-6 max-w-2xl bg-white p-8 rounded-lg shadow-md">
+      <div className="w-full flex flex-col gap-6 max-w-2xl bg-white p-8 rounded-lg shadow-md relative z-10">
         <div className="w-full text-center">
           <h2 className="text-3xl font-bold mb-2 text-gray-800">
             Add a Member

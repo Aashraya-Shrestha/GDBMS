@@ -16,6 +16,7 @@ import {
 import { Lock as LockIcon } from "@mui/icons-material";
 import { toast, ToastContainer } from "react-toastify"; // Import toast from react-toastify
 import "react-toastify/dist/ReactToastify.css"; // Import the CSS
+import "../Styles/ProfilePage.css"; // Import a CSS file for the floating shapes
 
 const ProfilePage = () => {
   const [gym, setGym] = useState(null); // State to store gym details
@@ -53,7 +54,6 @@ const ProfilePage = () => {
           email: response.data.gym.email,
         });
         setLoading(false); // Set loading to false
-        toast.success("Gym details fetched successfully"); // Success toast
       } catch (err) {
         setError("Failed to fetch gym details. Please try again.");
         setLoading(false);
@@ -66,9 +66,13 @@ const ProfilePage = () => {
   }, [navigate]);
 
   const handleLogout = () => {
-    localStorage.removeItem("token"); // Clear the token
+    localStorage.clear(); // Clear the token
     toast.success("Logged out successfully"); // Success toast
-    navigate("/login"); // Redirect to login page
+
+    // Add a 2-second delay before redirecting to the login page
+    setTimeout(() => {
+      navigate("/login"); // Redirect to login page after 2 seconds
+    }, 2000); // 2000 milliseconds = 2 seconds
   };
 
   const handleEditToggle = () => {
@@ -145,8 +149,25 @@ const ProfilePage = () => {
   }
 
   return (
-    <Container sx={{ mt: 4 }}>
-      <Card sx={{ maxWidth: 600, margin: "auto", p: 3 }}>
+    <Container sx={{ mt: 4, position: "relative", overflow: "hidden" }}>
+      {/* Floating Shapes */}
+      <div className="floating-shapes">
+        <div className="shape shape-1"></div>
+        <div className="shape shape-2"></div>
+        <div className="shape shape-3"></div>
+        <div className="shape shape-4"></div>
+        <div className="shape shape-5"></div>
+      </div>
+
+      <Card
+        sx={{
+          maxWidth: 600,
+          margin: "auto",
+          p: 3,
+          position: "relative",
+          zIndex: 10,
+        }}
+      >
         <Box
           sx={{
             display: "flex",
@@ -236,7 +257,7 @@ const ProfilePage = () => {
               <Button
                 variant="contained"
                 color="secondary"
-                onClick={handleLogout}
+                onClick={handleLogout} // Add the logout button here
               >
                 Logout
               </Button>

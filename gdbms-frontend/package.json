@@ -14,12 +14,15 @@
     "antd": "^5.24.1",
     "axios": "^1.8.1",
     "dotenv": "^16.4.7",
+    "framer-motion": "^12.4.10",
+    "lucide-react": "^0.479.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.1.5",
     "react-scripts": "5.0.1",
     "react-toastify": "^11.0.5",
     "recharts": "^2.15.1",
+    "swiper": "^11.2.5",
     "web-vitals": "^2.1.4"
   },
   "scripts": {

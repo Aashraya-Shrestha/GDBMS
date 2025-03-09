@@ -57,7 +57,7 @@ const GeneralUser = () => {
   );
 
   return (
-    <div className="flex-1 bg-slate-100 px-6 py-4">
+    <div className="flex-1 px-6 py-4">
       <h1 className="text-black text-3xl font-semibold mb-6 text-center">
         {header}
       </h1>

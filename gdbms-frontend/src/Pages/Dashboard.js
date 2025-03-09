@@ -16,7 +16,12 @@ const Dashboard = () => {
   const navigate = useNavigate();
 
   const cardData = [
-    { title: "Joined Members", ImageIcon: PeopleAltIcon, path: "/memberList" },
+    {
+      title: "Active Members",
+      ImageIcon: PeopleAltIcon,
+      path: "/memberList",
+      value: "active", // Add a value to indicate active members
+    },
     {
       title: "Joined This Month",
       ImageIcon: BarChartIcon,
@@ -50,11 +55,15 @@ const Dashboard = () => {
   ];
 
   const handleCardClick = (path, value) => {
-    // If path starts with '/specific', set sessionStorage
-    if (path.startsWith("/specific") && value) {
+    // If path is "/memberList", pass a query parameter or state to indicate active members
+    if (path === "/memberList" && value === "active") {
+      navigate(path, { state: { filter: "active" } }); // Pass state to indicate active members
+    } else if (path.startsWith("/specific") && value) {
       handleOnClickMenu(value);
+      navigate(path);
+    } else {
+      navigate(path);
     }
-    navigate(path);
   };
 
   const handleOnClickMenu = (value) => {

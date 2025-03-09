@@ -3,6 +3,8 @@ import signupImage from "../assets/Images/tom.png";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
+import { IconButton } from "@mui/material"; // Import IconButton
+import { ArrowBack } from "@mui/icons-material"; // Import ArrowBack icon
 
 const SignupPage = () => {
   const navigate = useNavigate();
@@ -18,6 +20,7 @@ const SignupPage = () => {
   const handleOnChange = (event, name) => {
     setSignupInfo({ ...signupInfo, [name]: event.target.value });
   };
+
   const handleSignup = async () => {
     if (isButtonDisabled) return; // Prevents multiple clicks
 
@@ -30,7 +33,7 @@ const SignupPage = () => {
 
       // Delay navigation after 2 seconds
       setTimeout(() => {
-        navigate("/");
+        navigate("/login");
       }, 1000);
     } catch (error) {
       toast.error(error.response?.data?.message || "Signup failed!");
@@ -61,6 +64,16 @@ const SignupPage = () => {
 
       {/* Right Section */}
       <div className="md:w-1/2 w-full bg-gray-700 flex flex-col p-6 md:p-20 justify-between">
+        {/* Go Back Button (Arrow Icon) */}
+        <IconButton
+          onClick={() => navigate("/")} // Navigate to landing page
+          className="self-start text-white hover:text-blue-300"
+          aria-label="go back"
+          style={{ color: "#FFD700", fontSize: "2rem" }} // Bright yellow color and larger size
+        >
+          <ArrowBack /> {/* Material-UI ArrowBack icon */}
+        </IconButton>
+
         {/* Input Fields */}
         <div className="w-full flex flex-col gap-5">
           <div className="w-full flex flex-col justify-center">
@@ -121,7 +134,7 @@ const SignupPage = () => {
             </span>
             <p
               className="text-sm font-medium underline cursor-pointer text-white hover:text-blue-300"
-              onClick={() => navigate("/")}
+              onClick={() => navigate("/login")}
             >
               Login
             </p>

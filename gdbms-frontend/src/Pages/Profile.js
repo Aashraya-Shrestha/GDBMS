@@ -16,6 +16,7 @@ import {
 import { Lock as LockIcon } from "@mui/icons-material";
 import { toast, ToastContainer } from "react-toastify"; // Import toast from react-toastify
 import "react-toastify/dist/ReactToastify.css"; // Import the CSS
+import { Modal } from "antd"; // Import Ant Design Modal
 import "../Styles/ProfilePage.css"; // Import a CSS file for the floating shapes
 
 const ProfilePage = () => {
@@ -23,6 +24,7 @@ const ProfilePage = () => {
   const [loading, setLoading] = useState(true); // State to handle loading state
   const [error, setError] = useState(""); // State to handle errors
   const [isEditing, setIsEditing] = useState(false); // State to toggle edit mode
+  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false); // State for delete confirmation modal
   const [formData, setFormData] = useState({
     gymName: "",
     username: "",
@@ -65,16 +67,6 @@ const ProfilePage = () => {
     fetchGymDetails();
   }, [navigate]);
 
-  const handleLogout = () => {
-    localStorage.clear(); // Clear the token
-    toast.success("Logged out successfully"); // Success toast
-
-    // Add a 2-second delay before redirecting to the login page
-    setTimeout(() => {
-      navigate("/login"); // Redirect to login page after 2 seconds
-    }, 2000); // 2000 milliseconds = 2 seconds
-  };
-
   const handleEditToggle = () => {
     setIsEditing(!isEditing); // Toggle edit mode
   };
@@ -116,6 +108,41 @@ const ProfilePage = () => {
       }
       console.error("Failed to update gym details:", err);
     }
+  };
+
+  // Show the delete confirmation modal
+  const showDeleteModal = () => {
+    setIsDeleteModalVisible(true);
+  };
+
+  // Handle delete confirmation
+  const handleDeleteConfirm = async () => {
+    try {
+      const response = await axios.delete(
+        `${process.env.REACT_APP_GYM_ROUTE}/deleteGym`,
+        {
+          withCredentials: true,
+        }
+      );
+
+      if (response.status === 200) {
+        toast.success("Gym account deleted successfully"); // Success toast
+        localStorage.clear(); // Clear the token
+        setTimeout(() => {
+          navigate("/login"); // Redirect to login page after 2 seconds
+        }, 2000); // 2000 milliseconds = 2 seconds
+      }
+    } catch (err) {
+      console.error("Error deleting gym account:", err);
+      toast.error("Failed to delete gym account"); // Error toast
+    } finally {
+      setIsDeleteModalVisible(false); // Close the modal
+    }
+  };
+
+  // Handle delete cancellation
+  const handleDeleteCancel = () => {
+    setIsDeleteModalVisible(false); // Close the modal
   };
 
   if (loading) {
@@ -256,15 +283,31 @@ const ProfilePage = () => {
               </Button>
               <Button
                 variant="contained"
-                color="secondary"
-                onClick={handleLogout} // Add the logout button here
+                color="error" // Red color for delete button
+                onClick={showDeleteModal} // Show delete confirmation modal
               >
-                Logout
+                Delete Account
               </Button>
             </Box>
           </>
         )}
       </Card>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        title="Delete Account"
+        visible={isDeleteModalVisible}
+        onOk={handleDeleteConfirm}
+        onCancel={handleDeleteCancel}
+        okText="Delete"
+        cancelText="Cancel"
+        okButtonProps={{ danger: true }} // Make the delete button red
+      >
+        <p>
+          Are you sure you want to delete your account? This action cannot be
+          undone.
+        </p>
+      </Modal>
 
       {/* Toast Container */}
       <ToastContainer />

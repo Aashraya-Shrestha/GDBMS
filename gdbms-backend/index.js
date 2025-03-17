@@ -20,10 +20,12 @@ require("./DbConn/conn");
 const gymRoutes = require("./Routes/gymRoute");
 const membershipRoutes = require("./Routes/memebrshipRoute");
 const memberRoutes = require("./Routes/memberRotue");
+const trainerRoutes = require("./Routes/trainerRoute");
 
 app.use("/auth", gymRoutes);
 app.use("/plans", membershipRoutes);
 app.use("/members", memberRoutes);
+app.use("/trainer", trainerRoutes);
 
 app.get("/", (req, res) => {
   res.send({ message: "Your server is running" });

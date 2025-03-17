@@ -15,6 +15,8 @@ import StatsPage from "./Components/StatsPage";
 import ProfilePage from "./Pages/Profile";
 import { ToastContainer } from "react-toastify";
 import LandingPage from "./Pages/LandingPage";
+import TrainerList from "./Pages/TrainerList";
+import TrainerDetail from "./Pages/TrainerDetail";
 
 function App() {
   const navigate = useNavigate();
@@ -44,8 +46,10 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/memberList" element={<MemberList />} />
           <Route path="/addMember" element={<AddMemberForm />} />
+          <Route path="/trainerList" element={<TrainerList />} />
           <Route path="/specific/:page" element={<GeneralUser />} />
           <Route path="/member/:id" element={<MemberDetail />} />
+          <Route path="/trainerDetail/:id" element={<TrainerDetail />} />
           <Route path="/statsPage" element={<StatsPage />} />
           <Route path="/profile" element={<ProfilePage />} />
         </Routes>

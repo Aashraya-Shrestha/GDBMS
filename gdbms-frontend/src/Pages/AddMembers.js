@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from "react";
-import { Select, Button } from "antd";
+import { Select, Button, DatePicker } from "antd"; // Import DatePicker from Ant Design
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import dayjs from "dayjs";
 import axios from "axios";
 import "../Styles/AddMemberForm.css"; // Import a CSS file for the floating shapes
 
+const { RangePicker } = DatePicker;
+
 const AddMemberForm = () => {
   const [memberInfo, setMemberInfo] = useState({
     name: "",
     phoneNumber: "",
     address: "",
-    joiningDate: dayjs(),
+    joiningDate: dayjs(), // Default to today's date
     memberType: "Add membership type",
   });
 
@@ -48,14 +50,25 @@ const AddMemberForm = () => {
     setMemberInfo((prev) => ({ ...prev, memberType: value }));
   };
 
+  // Handle joining date change
+  const handleJoiningDateChange = (date) => {
+    setMemberInfo((prev) => ({ ...prev, joiningDate: date }));
+  };
+
   const handleSubmit = async () => {
     try {
-      const { name, phoneNumber, address, memberType } = memberInfo;
+      const { name, phoneNumber, address, memberType, joiningDate } =
+        memberInfo;
+
+      // Format the joiningDate to ISO string
+      const formattedJoiningDate = joiningDate.toISOString();
+
       const memberData = {
         name,
         phoneNumber,
         address,
         membership: memberType,
+        joiningDate: formattedJoiningDate, // Include joiningDate in the request
       };
 
       const response = await axios.post(
@@ -65,10 +78,12 @@ const AddMemberForm = () => {
       );
       toast.success(response.data.message);
 
+      // Reset form fields
       setMemberInfo({
         name: "",
         phoneNumber: "",
         address: "",
+        joiningDate: dayjs(), // Reset to today's date
         memberType: "",
       });
     } catch (error) {
@@ -139,6 +154,19 @@ const AddMemberForm = () => {
             onChange={handleChange}
             placeholder="Enter address"
             className="w-full py-2 px-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        {/* Joining Date Input */}
+        <div className="flex flex-col gap-2">
+          <label className="text-sm font-medium text-gray-700">
+            Joining Date
+          </label>
+          <DatePicker
+            value={memberInfo.joiningDate}
+            onChange={handleJoiningDateChange}
+            className="w-full"
+            format="YYYY-MM-DD" // Format the date display
           />
         </div>
 

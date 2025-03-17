@@ -94,16 +94,12 @@ const ProfilePage = () => {
     } catch (err) {
       // Handle errors
       if (err.response) {
-        // The request was made and the server responded with a status code
-        // that falls out of the range of 2xx
         toast.error(
           err.response.data.message || "Failed to update gym details"
         ); // Error toast
       } else if (err.request) {
-        // The request was made but no response was received
         toast.error("No response from the server. Please try again."); // Error toast
       } else {
-        // Something happened in setting up the request that triggered an error
         toast.error("An unexpected error occurred. Please try again."); // Error toast
       }
       console.error("Failed to update gym details:", err);

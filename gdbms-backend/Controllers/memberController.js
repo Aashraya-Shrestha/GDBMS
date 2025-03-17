@@ -23,8 +23,9 @@ exports.getAllMember = async (req, res) => {
 
 exports.addMember = async (req, res) => {
   try {
-    const { name, address, phoneNumber, membership } = req.body;
+    const { name, address, phoneNumber, membership, joiningDate } = req.body;
 
+    // Check if a member with the same phone number already exists
     const member = await Member.findOne({ gym: req.gym._id, phoneNumber });
     if (member) {
       return res.status(409).json({
@@ -32,6 +33,7 @@ exports.addMember = async (req, res) => {
       });
     }
 
+    // Check if the selected membership exists
     const memberShip = await Membership.findOne({
       _id: membership,
       gym: req.gym._id,
@@ -43,17 +45,22 @@ exports.addMember = async (req, res) => {
       });
     }
 
-    const membershipMonth = memberShip.months; // The number of months in the membership
-    const today = new Date();
-    const nextBillDate = addMonthsToDate(membershipMonth, today);
+    // Parse the joiningDate from the request body
+    const parsedJoiningDate = new Date(joiningDate);
 
+    // Calculate the nextBillDate based on the manually set joiningDate
+    const membershipMonth = memberShip.months; // The number of months in the membership
+    const nextBillDate = addMonthsToDate(membershipMonth, parsedJoiningDate);
+
+    // Create the new member
     const newMember = new Member({
       name,
       address,
       phoneNumber,
       membership,
       gym: req.gym._id,
-      lastPayment: today,
+      joiningDate: parsedJoiningDate, // Use the manually set joiningDate
+      lastPayment: parsedJoiningDate, // Set lastPayment to the joiningDate
       nextBillDate,
     });
     await newMember.save();
@@ -282,18 +289,18 @@ exports.updateMemberPlan = async (req, res) => {
       return res.status(409).json({ error: "No such membership found" });
     }
 
-    const months = membershipData.months; // Get the number of months from the membership
-    const today = new Date();
-    const nextBillDate = addMonthsToDate(months, today); // Calculate the next billing date
-
     const member = await Member.findOne({ gym: req.gym._id, _id: id });
     if (!member) {
       return res.status(409).json({ error: "No such member found" });
     }
 
+    // Calculate the nextBillDate based on the member's joiningDate
+    const months = membershipData.months; // Get the number of months from the membership
+    const nextBillDate = addMonthsToDate(months, member.joiningDate);
+
     // Update the member's nextBillDate and lastPayment
     member.nextBillDate = nextBillDate;
-    member.lastPayment = today;
+    member.lastPayment = new Date(); // Set lastPayment to today
     member.membership = membership; // Update membership plan
     await member.save();
 
@@ -310,7 +317,7 @@ exports.updateMemberPlan = async (req, res) => {
 exports.editMember = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, phoneNumber, address } = req.body;
+    const { name, phoneNumber, address, joiningDate } = req.body;
 
     const member = await Member.findOne({ _id: id, gym: req.gym._id });
     if (!member) {
@@ -334,6 +341,21 @@ exports.editMember = async (req, res) => {
     member.name = name || member.name;
     member.phoneNumber = phoneNumber || member.phoneNumber;
     member.address = address || member.address;
+
+    // Update the joiningDate if provided
+    if (joiningDate) {
+      const parsedJoiningDate = new Date(joiningDate);
+      member.joiningDate = parsedJoiningDate;
+
+      // Recalculate the nextBillDate based on the new joiningDate
+      const membership = await Membership.findById(member.membership);
+      if (membership) {
+        member.nextBillDate = addMonthsToDate(
+          membership.months,
+          parsedJoiningDate
+        );
+      }
+    }
 
     await member.save();
 

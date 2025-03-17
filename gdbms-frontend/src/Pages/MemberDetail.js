@@ -8,11 +8,13 @@ import {
   Modal,
   Form,
   Input,
+  DatePicker,
 } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import dayjs from "dayjs";
 
 const { Option } = Select;
 
@@ -26,6 +28,7 @@ const MemberDetail = () => {
   const [editedName, setEditedName] = useState("");
   const [editedPhone, setEditedPhone] = useState("");
   const [editedAddress, setEditedAddress] = useState("");
+  const [editedJoiningDate, setEditedJoiningDate] = useState(dayjs()); // For editing joining date
 
   const navigate = useNavigate();
   const { id } = useParams();
@@ -40,6 +43,8 @@ const MemberDetail = () => {
         setMember(response.data.member);
         // Set the status based on the member's status from the backend
         setStatus(response.data.member.status === "Active");
+        // Set the edited joining date
+        setEditedJoiningDate(dayjs(response.data.member.joiningDate));
       } catch (error) {
         console.error("Error fetching member details:", error);
       }
@@ -69,6 +74,11 @@ const MemberDetail = () => {
 
   const handleRenewClick = () => {
     if (status) setIsRenewing(true);
+  };
+
+  const handleCancelRenew = () => {
+    setIsRenewing(false); // Reset the renewing state
+    setMembershipType(null); // Clear the selected membership type
   };
 
   const handleMembershipChange = (value) => {
@@ -107,6 +117,7 @@ const MemberDetail = () => {
       setEditedName(member.name);
       setEditedPhone(member.phoneNumber);
       setEditedAddress(member.address);
+      setEditedJoiningDate(dayjs(member.joiningDate)); // Set the joining date for editing
     }
     setIsEditModalVisible(true);
   };
@@ -144,6 +155,7 @@ const MemberDetail = () => {
           name: editedName,
           phoneNumber: editedPhone,
           address: editedAddress,
+          joiningDate: editedJoiningDate.toISOString(), // Send the updated joining date
         },
         { withCredentials: true }
       );
@@ -153,6 +165,7 @@ const MemberDetail = () => {
         name: editedName,
         phoneNumber: editedPhone,
         address: editedAddress,
+        joiningDate: editedJoiningDate.toISOString(), // Update the joining date in local state
       });
 
       toast.success("Member details updated successfully");
@@ -187,11 +200,13 @@ const MemberDetail = () => {
             </p>
             <p className="text-xl text-gray-700">
               Join Date:{" "}
-              {new Date(member.createdAt).toLocaleDateString("en-GB")}
+              {new Date(member.joiningDate).toLocaleDateString("en-GB")}{" "}
+              {/* Updated */}
             </p>
             <p className="text-xl text-gray-700">
               Expires On:{" "}
-              {new Date(member.nextBillDate).toLocaleDateString("en-GB")}
+              {new Date(member.nextBillDate).toLocaleDateString("en-GB")}{" "}
+              {/* Updated */}
             </p>
 
             <div className="flex items-center gap-2 mt-4">
@@ -246,13 +261,22 @@ const MemberDetail = () => {
                   </Option>
                 ))}
               </Select>
-              <Button
-                type="primary"
-                onClick={handleSave}
-                className="bg-green-600"
-              >
-                Save
-              </Button>
+              <div className="flex gap-4">
+                <Button
+                  type="primary"
+                  onClick={handleSave}
+                  className="bg-green-600"
+                >
+                  Save
+                </Button>
+                <Button
+                  type="default"
+                  onClick={handleCancelRenew}
+                  className="border-gray-400"
+                >
+                  Cancel
+                </Button>
+              </div>
             </div>
           )}
         </div>
@@ -281,6 +305,14 @@ const MemberDetail = () => {
               <Input
                 value={editedPhone}
                 onChange={(e) => setEditedPhone(e.target.value)}
+              />
+            </Form.Item>
+            <Form.Item label="Joining Date">
+              <DatePicker
+                value={editedJoiningDate}
+                onChange={(date) => setEditedJoiningDate(date)}
+                format="YYYY-MM-DD"
+                className="w-full"
               />
             </Form.Item>
           </Form>

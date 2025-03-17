@@ -1,44 +1,40 @@
 const mongoose = require("mongoose");
 
-const memebrSchema = mongoose.Schema(
+const memberSchema = mongoose.Schema(
   {
     name: {
       type: String,
       required: true,
     },
-
     phoneNumber: {
       type: String,
       required: true,
     },
-
     address: {
       type: String,
       required: true,
     },
-
     membership: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "membership",
       required: true,
     },
-
     gym: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "gym",
       required: true,
     },
-
     status: {
       type: String,
       default: "Active",
     },
-
+    joiningDate: {
+      type: Date,
+    },
     lastPayment: {
       type: Date,
       default: new Date(),
     },
-
     nextBillDate: {
       type: Date,
       required: true,
@@ -49,6 +45,6 @@ const memebrSchema = mongoose.Schema(
   }
 );
 
-const memberModal = mongoose.model("members", memebrSchema);
+const memberModal = mongoose.model("members", memberSchema);
 
 module.exports = memberModal;

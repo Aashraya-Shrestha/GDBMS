@@ -187,14 +187,17 @@ function LandingPage() {
                 className="bg-white rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300"
               >
                 {/* Trainer Image */}
-                <img
-                  src={
-                    trainer.image ||
-                    "https://via.placeholder.com/500x500?text=No+Image"
-                  }
-                  alt={trainer.name}
-                  className="w-full h-64 object-cover"
-                />
+                <div className="w-full h-64 bg-gray-200 rounded-md flex items-center justify-center overflow-hidden">
+                  {trainer.imageUrl ? (
+                    <img
+                      src={trainer.imageUrl}
+                      alt={trainer.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-gray-500 text-lg">Profile Image</span>
+                  )}
+                </div>
 
                 {/* Trainer Details */}
                 <div className="p-6">

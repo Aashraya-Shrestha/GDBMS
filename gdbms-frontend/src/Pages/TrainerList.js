@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Row, Col, Modal, Form, Input, Button, DatePicker } from "antd";
+import { Row, Col, Modal, Form, Input, Button, DatePicker, Spin } from "antd";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
@@ -16,8 +16,13 @@ const TrainerList = () => {
     name: "",
     contact: "",
     experience: "",
+    description: "", // Add description to the state
     joiningDate: dayjs(), // Initialize with the current date
+    imageUrl: "", // Add imageUrl to the state
+    imageFile: null, // Add imageFile to the state
   });
+  const [isLoading, setIsLoading] = useState(false); // Loading state
+  const [form] = Form.useForm(); // Form instance for validation
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -41,18 +46,53 @@ const TrainerList = () => {
 
   const handleCancel = () => {
     setIsAddTrainerModalVisible(false);
+    form.resetFields(); // Reset form fields when modal is closed
   };
 
   const handleAddTrainer = () => {
     setIsAddTrainerModalVisible(true);
   };
 
-  const handleTrainerSubmit = async () => {
+  const handleImageUpload = async (file) => {
+    const data = new FormData();
+    data.append("file", file);
+    data.append("upload_preset", "gym-management");
+
     try {
-      // Format the joining date to ISO string before sending
+      const response = await axios.post(
+        "https://api.cloudinary.com/v1_1/dilliqjeq/image/upload",
+        data
+      );
+      return response.data.secure_url;
+    } catch (err) {
+      console.log(err);
+      toast.error("Error uploading image");
+      return null;
+    }
+  };
+
+  const handleTrainerSubmit = async () => {
+    setIsLoading(true); // Start loading
+    try {
+      // Validate form fields
+      await form.validateFields();
+
+      let imageUrl = trainerData.imageUrl; // Default to the existing image URL (if any)
+
+      // If a new image file is uploaded, upload it to Cloudinary
+      if (trainerData.imageFile) {
+        imageUrl = await handleImageUpload(trainerData.imageFile);
+        if (!imageUrl) {
+          toast.error("Failed to upload image");
+          setIsLoading(false); // Stop loading on error
+          return;
+        }
+      }
+
       const formattedData = {
         ...trainerData,
-        joiningDate: trainerData.joiningDate.toISOString(),
+        joiningDate: trainerData.joiningDate.toISOString(), // Include joiningDate
+        imageUrl: imageUrl, // Use the new or existing image URL
       };
 
       const response = await axios.post(
@@ -66,9 +106,13 @@ const TrainerList = () => {
         name: "",
         contact: "",
         experience: "",
-        joiningDate: dayjs(), // Reset to current date
+        description: "", // Reset description
+        joiningDate: dayjs(),
+        imageUrl: "",
+        imageFile: null, // Reset image file
       });
-      // Refresh the trainer list
+      form.resetFields(); // Reset form fields after submission
+
       const fetchResponse = await axios.get(
         "http://localhost:4000/trainer/all-trainers",
         { withCredentials: true }
@@ -79,10 +123,11 @@ const TrainerList = () => {
         "Error adding trainer: " +
           (error.response ? error.response.data.error : error.message)
       );
+    } finally {
+      setIsLoading(false); // Stop loading
     }
   };
 
-  // Filter trainers based on search query
   const filteredTrainers = trainers.filter((trainer) =>
     Object.values(trainer).some((value) =>
       value.toString().toLowerCase().includes(searchQuery.toLowerCase())
@@ -107,7 +152,6 @@ const TrainerList = () => {
           Add Trainer
         </Button>
       </div>
-      {/* Header Row */}
       <Row
         style={{
           display: "flex",
@@ -136,7 +180,6 @@ const TrainerList = () => {
           )
         )}
       </Row>
-      {/* Data Rows */}
       {filteredTrainers.length > 0 ? (
         filteredTrainers.map((item, index) => (
           <TrainerCard
@@ -151,39 +194,63 @@ const TrainerList = () => {
       ) : (
         <p>No trainers available</p>
       )}
-      {/* Add Trainer Modal */}
       <Modal
         title="Add Trainer"
         open={isAddTrainerModalVisible}
         onOk={handleTrainerSubmit}
         onCancel={handleCancel}
-        okText="Add Trainer"
+        okText={isLoading ? "Adding..." : "Add Trainer"} // Show loading text
+        okButtonProps={{ disabled: isLoading }} // Disable button when loading
         cancelText="Cancel"
+        confirmLoading={isLoading} // Show spinner in the modal
       >
-        <Form layout="vertical">
-          <Form.Item label="Name">
+        <Form form={form} layout="vertical">
+          <Form.Item
+            label="Name"
+            name="name"
+            rules={[
+              { required: true, message: "Please enter the trainer's name" },
+            ]}
+          >
             <Input
               value={trainerData.name}
               onChange={(e) =>
-                setTrainerData((prev) => ({
-                  ...prev,
-                  name: e.target.value,
-                }))
+                setTrainerData((prev) => ({ ...prev, name: e.target.value }))
               }
             />
           </Form.Item>
-          <Form.Item label="Contact">
+          <Form.Item
+            label="Contact"
+            name="contact"
+            rules={[
+              { required: true, message: "Please enter the trainer's contact" },
+              {
+                pattern: /^\d{10}$/,
+                message: "Contact must be exactly 10 digits",
+              },
+            ]}
+          >
             <Input
               value={trainerData.contact}
               onChange={(e) =>
-                setTrainerData((prev) => ({
-                  ...prev,
-                  contact: e.target.value,
-                }))
+                setTrainerData((prev) => ({ ...prev, contact: e.target.value }))
               }
             />
           </Form.Item>
-          <Form.Item label="Experience">
+          <Form.Item
+            label="Experience"
+            name="experience"
+            rules={[
+              {
+                required: true,
+                message: "Please enter the trainer's experience",
+              },
+              {
+                pattern: /^\d+$/,
+                message: "Experience must be a number",
+              },
+            ]}
+          >
             <Input
               value={trainerData.experience}
               onChange={(e) =>
@@ -194,17 +261,54 @@ const TrainerList = () => {
               }
             />
           </Form.Item>
-          <Form.Item label="Joining Date">
+          <Form.Item
+            label="Description"
+            name="description"
+            rules={[
+              {
+                required: true,
+                message: "Please enter the trainer's description",
+              },
+            ]}
+          >
+            <Input
+              value={trainerData.description}
+              onChange={(e) =>
+                setTrainerData((prev) => ({
+                  ...prev,
+                  description: e.target.value,
+                }))
+              }
+            />
+          </Form.Item>
+          <Form.Item
+            label="Joining Date"
+            name="joiningDate"
+            rules={[
+              {
+                required: true,
+                message: "Please select the trainer's joining date",
+              },
+            ]}
+          >
             <DatePicker
               value={trainerData.joiningDate}
               onChange={(date) =>
+                setTrainerData((prev) => ({ ...prev, joiningDate: date }))
+              }
+              format="YYYY-MM-DD"
+              style={{ width: "100%" }}
+            />
+          </Form.Item>
+          <Form.Item label="Image" name="image">
+            <Input
+              type="file"
+              onChange={(e) =>
                 setTrainerData((prev) => ({
                   ...prev,
-                  joiningDate: date,
+                  imageFile: e.target.files[0],
                 }))
               }
-              format="YYYY-MM-DD" // Format the date display
-              style={{ width: "100%" }}
             />
           </Form.Item>
         </Form>

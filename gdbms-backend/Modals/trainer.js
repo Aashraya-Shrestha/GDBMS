@@ -22,6 +22,9 @@ const trainerSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "gym", // Optional reference to the gym
   },
+  imageUrl: {
+    type: String, // Store the URL of the uploaded image
+  },
 });
 
 const modalTrainer = mongoose.model("trainer", trainerSchema);

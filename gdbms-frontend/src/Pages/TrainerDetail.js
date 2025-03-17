@@ -8,6 +8,7 @@ import {
   DatePicker,
   Divider,
   Popconfirm,
+  Spin,
 } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
@@ -17,12 +18,16 @@ import dayjs from "dayjs";
 
 const TrainerDetail = () => {
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [trainer, setTrainer] = useState(null);
   const [editedName, setEditedName] = useState("");
   const [editedContact, setEditedContact] = useState("");
   const [editedExperience, setEditedExperience] = useState("");
   const [editedDescription, setEditedDescription] = useState("");
   const [editedJoiningDate, setEditedJoiningDate] = useState(dayjs());
+  const [editedImageFile, setEditedImageFile] = useState(null); // For file upload
+  const [isLoading, setIsLoading] = useState(false); // Loading state
+  const [form] = Form.useForm(); // Form instance for validation
 
   const navigate = useNavigate();
   const { id } = useParams();
@@ -35,7 +40,7 @@ const TrainerDetail = () => {
           { withCredentials: true }
         );
         setTrainer(response.data.trainer);
-        setEditedJoiningDate(dayjs(response.data.trainer.joiningDate)); // Set the joining date for editing
+        setEditedJoiningDate(dayjs(response.data.trainer.joiningDate));
       } catch (error) {
         console.error("Error fetching trainer details:", error);
         toast.error("Failed to fetch trainer details");
@@ -50,17 +55,60 @@ const TrainerDetail = () => {
       setEditedContact(trainer.contact);
       setEditedExperience(trainer.experience);
       setEditedDescription(trainer.description);
-      setEditedJoiningDate(dayjs(trainer.joiningDate)); // Set the joining date for editing
+      setEditedJoiningDate(dayjs(trainer.joiningDate));
+      form.setFieldsValue({
+        name: trainer.name,
+        contact: trainer.contact,
+        experience: trainer.experience,
+        description: trainer.description,
+        joiningDate: dayjs(trainer.joiningDate),
+      });
     }
     setIsEditModalVisible(true);
   };
 
   const handleEditCancel = () => {
     setIsEditModalVisible(false);
+    setEditedImageFile(null); // Clear the file input on cancel
+    form.resetFields(); // Reset form fields
+  };
+
+  const handleImageUpload = async (file) => {
+    const data = new FormData();
+    data.append("file", file);
+    data.append("upload_preset", "gym-management"); // Replace with your Cloudinary upload preset
+
+    try {
+      const response = await axios.post(
+        "https://api.cloudinary.com/v1_1/dilliqjeq/image/upload", // Replace with your Cloudinary cloud name
+        data
+      );
+      return response.data.secure_url; // Return the uploaded image URL
+    } catch (err) {
+      console.error("Error uploading image:", err);
+      toast.error("Error uploading image");
+      return null;
+    }
   };
 
   const handleEditSave = async () => {
+    setIsLoading(true); // Start loading
     try {
+      // Validate form fields
+      await form.validateFields();
+
+      let imageUrl = trainer.imageUrl; // Default to the existing image URL
+
+      // If a new image file is uploaded, upload it to Cloudinary
+      if (editedImageFile) {
+        imageUrl = await handleImageUpload(editedImageFile);
+        if (!imageUrl) {
+          toast.error("Failed to upload image");
+          setIsLoading(false); // Stop loading on error
+          return;
+        }
+      }
+
       const response = await axios.put(
         `http://localhost:4000/trainer/edit-trainer/${id}`,
         {
@@ -68,7 +116,8 @@ const TrainerDetail = () => {
           contact: editedContact,
           experience: editedExperience,
           description: editedDescription,
-          joiningDate: editedJoiningDate.toISOString(), // Send the updated joining date
+          joiningDate: editedJoiningDate.toISOString(),
+          imageUrl: imageUrl, // Use the new or existing image URL
         },
         { withCredentials: true }
       );
@@ -79,19 +128,18 @@ const TrainerDetail = () => {
         contact: editedContact,
         experience: editedExperience,
         description: editedDescription,
-        joiningDate: editedJoiningDate.toISOString(), // Update the joining date in local state
+        joiningDate: editedJoiningDate.toISOString(),
+        imageUrl: imageUrl, // Update the image URL in local state
       });
 
-      // Show success toast
       toast.success("Trainer details updated successfully");
-
-      // Close the modal after a short delay
-      setTimeout(() => {
-        setIsEditModalVisible(false);
-      }, 1000); // 1 second delay
+      setIsEditModalVisible(false);
+      setEditedImageFile(null); // Clear the file input after saving
     } catch (error) {
       console.error("Error updating trainer details:", error);
       toast.error("Failed to update trainer details");
+    } finally {
+      setIsLoading(false); // Stop loading
     }
   };
 
@@ -101,14 +149,8 @@ const TrainerDetail = () => {
         `http://localhost:4000/trainer/delete-trainer/${id}`,
         { withCredentials: true }
       );
-
-      // Show success toast
       toast.success("Trainer deleted successfully");
-
-      // Navigate to the trainer list after a short delay
-      setTimeout(() => {
-        navigate("/trainerList");
-      }, 2000); // 2 seconds delay
+      navigate("/trainerList");
     } catch (error) {
       console.error("Error deleting trainer:", error);
       toast.error("Failed to delete trainer");
@@ -130,8 +172,16 @@ const TrainerDetail = () => {
       </Button>
       <Card className="shadow-lg p-6">
         <div className="flex flex-col md:flex-row items-center gap-8">
-          <div className="w-52 h-52 bg-gray-200 rounded-md flex items-center justify-center">
-            <span className="text-gray-500 text-lg">Profile Image</span>
+          <div className="w-52 h-52 bg-gray-200 rounded-md flex items-center justify-center overflow-hidden">
+            {trainer.imageUrl ? (
+              <img
+                src={trainer.imageUrl}
+                alt="Profile"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span className="text-gray-500 text-lg">Profile Image</span>
+            )}
           </div>
 
           <div className="flex-1 space-y-4">
@@ -145,8 +195,7 @@ const TrainerDetail = () => {
             </p>
             <p className="text-xl text-gray-700">
               Join Date:{" "}
-              {new Date(trainer.joiningDate).toLocaleDateString("en-GB")}{" "}
-              {/* Updated */}
+              {new Date(trainer.joiningDate).toLocaleDateString("en-GB")}
             </p>
           </div>
         </div>
@@ -164,6 +213,7 @@ const TrainerDetail = () => {
           <Popconfirm
             title="Are you sure you want to delete this trainer?"
             onConfirm={handleDeleteTrainer}
+            onCancel={() => setIsDeleteModalVisible(false)}
             okText="Yes"
             cancelText="No"
           >
@@ -179,33 +229,84 @@ const TrainerDetail = () => {
           onOk={handleEditSave}
           onCancel={handleEditCancel}
           okText="Save"
+          confirmLoading={isLoading} // Show loading indicator in the modal
         >
-          <Form layout="vertical">
-            <Form.Item label="Name">
+          <Form form={form} layout="vertical">
+            <Form.Item
+              label="Name"
+              name="name"
+              rules={[
+                { required: true, message: "Please enter the trainer's name" },
+              ]}
+            >
               <Input
                 value={editedName}
                 onChange={(e) => setEditedName(e.target.value)}
               />
             </Form.Item>
-            <Form.Item label="Contact">
+            <Form.Item
+              label="Contact"
+              name="contact"
+              rules={[
+                {
+                  required: true,
+                  message: "Please enter the trainer's contact",
+                },
+                {
+                  pattern: /^\d{10}$/,
+                  message: "Contact must be exactly 10 digits",
+                },
+              ]}
+            >
               <Input
                 value={editedContact}
                 onChange={(e) => setEditedContact(e.target.value)}
               />
             </Form.Item>
-            <Form.Item label="Experience">
+            <Form.Item
+              label="Experience"
+              name="experience"
+              rules={[
+                {
+                  required: true,
+                  message: "Please enter the trainer's experience",
+                },
+                {
+                  pattern: /^\d+$/,
+                  message: "Experience must be a number",
+                },
+              ]}
+            >
               <Input
                 value={editedExperience}
                 onChange={(e) => setEditedExperience(e.target.value)}
               />
             </Form.Item>
-            <Form.Item label="Description">
+            <Form.Item
+              label="Description"
+              name="description"
+              rules={[
+                {
+                  required: true,
+                  message: "Please enter the trainer's description",
+                },
+              ]}
+            >
               <Input
                 value={editedDescription}
                 onChange={(e) => setEditedDescription(e.target.value)}
               />
             </Form.Item>
-            <Form.Item label="Joining Date">
+            <Form.Item
+              label="Joining Date"
+              name="joiningDate"
+              rules={[
+                {
+                  required: true,
+                  message: "Please select the trainer's joining date",
+                },
+              ]}
+            >
               <DatePicker
                 value={editedJoiningDate}
                 onChange={(date) => setEditedJoiningDate(date)}
@@ -213,20 +314,16 @@ const TrainerDetail = () => {
                 className="w-full"
               />
             </Form.Item>
+            <Form.Item label="Profile Image" name="image">
+              <Input
+                type="file"
+                onChange={(e) => setEditedImageFile(e.target.files[0])}
+              />
+            </Form.Item>
           </Form>
         </Modal>
       </Card>
-      <ToastContainer
-        position="top-right"
-        autoClose={2000} // Close toast after 2 seconds
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-      />
+      <ToastContainer />
     </div>
   );
 };

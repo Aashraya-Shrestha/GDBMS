@@ -23,7 +23,15 @@ exports.getAllTrainers = async (req, res) => {
 
 exports.addTrainer = async (req, res) => {
   try {
-    const { name, contact, experience, description, gym } = req.body;
+    const {
+      name,
+      contact,
+      experience,
+      description,
+      gym,
+      imageUrl,
+      joiningDate,
+    } = req.body;
 
     // Check if a trainer with the same contact number already exists
     const trainer = await Trainer.findOne({ contact });
@@ -40,6 +48,8 @@ exports.addTrainer = async (req, res) => {
       experience,
       description,
       gym: gym || null, // Use the gym ID if provided, otherwise set to null
+      imageUrl: imageUrl || null, // Use the image URL if provided, otherwise set to null
+      joiningDate: joiningDate || new Date(), // Use the provided joining date or default to the current date
     });
     await newTrainer.save();
 
@@ -81,7 +91,8 @@ exports.getTrainerDetail = async (req, res) => {
 exports.editTrainer = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, contact, experience, description } = req.body;
+    const { name, contact, experience, description, imageUrl, joiningDate } =
+      req.body;
 
     const trainer = await Trainer.findOne({ _id: id });
     if (!trainer) {
@@ -103,6 +114,8 @@ exports.editTrainer = async (req, res) => {
     trainer.contact = contact || trainer.contact;
     trainer.experience = experience || trainer.experience;
     trainer.description = description || trainer.description;
+    trainer.imageUrl = imageUrl || trainer.imageUrl;
+    trainer.joiningDate = joiningDate || trainer.joiningDate; // Update joiningDate
 
     await trainer.save();
 

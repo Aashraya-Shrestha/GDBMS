@@ -35,7 +35,7 @@ const Dashboard = () => {
       value: "threeDays",
     },
     {
-      title: "Expiring This Week",
+      title: "Expiring within 4 to 7 Week",
       ImageIcon: AccessAlarmsIcon,
       path: "/specific/expiring-this-week",
       value: "thisWeek",
@@ -79,7 +79,10 @@ const Dashboard = () => {
       {/* Header Section */}
       <div className="w-full bg-slate-800 text-white rounded-lg flex p-3 justify-between items-center">
         <div className="font-normal text-xl">Hello Admin!</div>
-        <div className="w-10 h-10 rounded-3xl border-1 bg-white">
+        <div
+          className="w-10 h-10 rounded-3xl border-1 bg-white cursor-pointer"
+          onClick={() => navigate("/profile")}
+        >
           <Avatar />
         </div>
       </div>

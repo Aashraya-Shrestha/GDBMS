@@ -1,10 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dumbbell,
   MapPin,
   Phone,
   Mail,
-  Star,
   Users,
   Timer,
   Shield,
@@ -12,6 +11,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import axios from "axios";
 
 function LandingPage() {
   const navigate = useNavigate();
@@ -21,6 +21,28 @@ function LandingPage() {
     message: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [trainers, setTrainers] = useState([]); // State to store trainers data
+
+  // Fetch trainers from the backend
+  useEffect(() => {
+    const fetchTrainers = async () => {
+      try {
+        const response = await axios.get(
+          "http://localhost:4000/trainer/all-trainers",
+          { withCredentials: true }
+        );
+        if (response.data.trainers) {
+          setTrainers(response.data.trainers);
+        }
+      } catch (error) {
+        toast.error(
+          error.response?.data?.message || "Failed to fetch trainers"
+        );
+      }
+    };
+
+    fetchTrainers();
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -44,8 +66,6 @@ function LandingPage() {
         body: JSON.stringify(formData),
       });
 
-      const data = await response.json();
-
       if (response.ok) {
         toast.success("Message sent successfully!");
         setFormData({ name: "", email: "", message: "" });
@@ -61,81 +81,6 @@ function LandingPage() {
       }, 10000);
     }
   };
-
-  const trainers = [
-    {
-      name: "John Smith",
-      specialty: "Strength Training",
-      experience: "10+ years",
-      image:
-        "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=500&h=500&fit=crop",
-    },
-    {
-      name: "Sarah Johnson",
-      specialty: "Body Transformation",
-      experience: "8+ years",
-      image:
-        "https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=500&h=500&fit=crop", // Updated URL
-    },
-    {
-      name: "Mike Chen",
-      specialty: "Powerlifting",
-      experience: "12+ years",
-      image:
-        "https://images.unsplash.com/photo-1594381898411-846e7d193883?w=500&h=500&fit=crop",
-    },
-  ];
-
-  // In the Trainers Section
-  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-    {trainers.map((trainer, index) => (
-      <div
-        key={index}
-        className="bg-white rounded-lg overflow-hidden shadow-lg"
-      >
-        <img
-          src={trainer.image}
-          alt={trainer.name}
-          className="w-full h-64 object-cover"
-          onError={(e) => {
-            e.target.src = "https://via.placeholder.com/500x500?text=No+Image"; // Fallback image
-          }}
-        />
-        <div className="p-6">
-          <h3 className="text-xl font-semibold mb-2">{trainer.name}</h3>
-          <p className="text-red-600 mb-2">{trainer.specialty}</p>
-          <p className="text-gray-600">Experience: {trainer.experience}</p>
-        </div>
-      </div>
-    ))}
-  </div>;
-
-  const reviews = [
-    {
-      name: "David Wilson",
-      rating: 5,
-      comment:
-        "Incredible equipment and knowledgeable trainers. Transformed my fitness journey!",
-      image:
-        "https://images.unsplash.com/photo-1603415526960-f7e0328c63b1?w=150&h=150&fit=crop",
-    },
-    {
-      name: "Emma Thompson",
-      rating: 5,
-      comment:
-        "The personal attention from trainers is exceptional. Best gym experience ever!",
-      image:
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop",
-    },
-    {
-      name: "James Rodriguez",
-      rating: 5,
-      comment:
-        "State-of-the-art equipment and amazing atmosphere. Worth every penny!",
-      image:
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop",
-    },
-  ];
 
   return (
     <div className="min-h-screen bg-gray-50 font-poppins">
@@ -239,51 +184,27 @@ function LandingPage() {
             {trainers.map((trainer, index) => (
               <div
                 key={index}
-                className="bg-white rounded-lg overflow-hidden shadow-lg"
+                className="bg-white rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300"
               >
+                {/* Trainer Image */}
                 <img
-                  src={trainer.image}
+                  src={
+                    trainer.image ||
+                    "https://via.placeholder.com/500x500?text=No+Image"
+                  }
                   alt={trainer.name}
                   className="w-full h-64 object-cover"
                 />
+
+                {/* Trainer Details */}
                 <div className="p-6">
                   <h3 className="text-xl font-semibold mb-2">{trainer.name}</h3>
                   <p className="text-red-600 mb-2">{trainer.specialty}</p>
                   <p className="text-gray-600">
-                    Experience: {trainer.experience}
+                    Experience: {trainer.experience} years
                   </p>
+                  <p className="text-gray-600">{trainer.description}</p>
                 </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Testimonials Section */}
-      <div className="py-20 bg-white">
-        <div className="container mx-auto px-4">
-          <h2 className="text-4xl font-bold text-center mb-16">
-            Member Reviews
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {reviews.map((review, index) => (
-              <div key={index} className="bg-white p-6 rounded-lg shadow-lg">
-                <div className="flex items-center mb-4">
-                  <img
-                    src={review.image}
-                    alt={review.name}
-                    className="w-12 h-12 rounded-full mr-4"
-                  />
-                  <div>
-                    <h3 className="font-semibold">{review.name}</h3>
-                    <div className="flex text-yellow-400">
-                      {[...Array(review.rating)].map((_, i) => (
-                        <Star key={i} size={16} fill="currentColor" />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                <p className="text-gray-600">{review.comment}</p>
               </div>
             ))}
           </div>

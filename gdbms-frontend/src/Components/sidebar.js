@@ -17,6 +17,7 @@ const SideBar = ({ className }) => {
     { label: "Dashboard", path: "/dashboard", icon: <PieChartOutlined /> },
     { label: "Add Members", path: "/addMember", icon: <DesktopOutlined /> },
     { label: "Member List", path: "/memberList", icon: <TeamOutlined /> },
+    { label: "Trainer List", path: "/trainerList", icon: <TeamOutlined /> },
     { label: "Profile", path: "/profile", icon: <UserOutlined /> },
   ];
 

@@ -172,7 +172,18 @@ const ProfilePage = () => {
   }
 
   return (
-    <Container sx={{ mt: 4, position: "relative", overflow: "hidden" }}>
+    <Container
+      sx={{
+        minHeight: "100vh", // Ensure the container spans the full height of the page
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        alignItems: "center",
+        position: "relative",
+        overflow: "hidden",
+        p: 4, // Add padding to the container
+      }}
+    >
       {/* Floating Shapes */}
       <div className="floating-shapes">
         <div className="shape shape-1"></div>
@@ -185,10 +196,12 @@ const ProfilePage = () => {
       <Card
         sx={{
           maxWidth: 600,
-          margin: "auto",
+          width: "100%",
           p: 3,
           position: "relative",
           zIndex: 10,
+          backgroundColor: "rgba(255, 255, 255, 0.9)", // Slightly transparent background
+          backdropFilter: "blur(10px)", // Add a blur effect
         }}
       >
         <Box

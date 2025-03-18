@@ -80,7 +80,7 @@ exports.addMember = async (req, res) => {
 exports.monthlyMembers = async (req, res) => {
   try {
     const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1); // Start of the current month
     const endOfMonth = new Date(
       now.getFullYear(),
       now.getMonth() + 1,
@@ -89,22 +89,23 @@ exports.monthlyMembers = async (req, res) => {
       59,
       59,
       999
-    );
+    ); // End of the current month
 
-    const member = await Member.find({
+    // Fetch members who joined this month
+    const members = await Member.find({
       gym: req.gym._id,
-      createdAt: {
-        $gte: startOfMonth,
-        $lte: endOfMonth,
+      joiningDate: {
+        $gte: startOfMonth, // Joining date is greater than or equal to the start of the month
+        $lte: endOfMonth, // Joining date is less than or equal to the end of the month
       },
-    }).sort({ createdAt: -1 });
+    }).sort({ joiningDate: -1 }); // Sort by joiningDate in descending order
 
     res.status(200).json({
-      message: member.length
+      message: members.length
         ? "Members fetched successfully"
-        : "No memebrs have been added this month",
-      members: member,
-      totalMembers: member.length,
+        : "No members have joined this month",
+      members: members,
+      totalMembers: members.length,
     });
   } catch (err) {
     console.log(err);
@@ -114,7 +115,6 @@ exports.monthlyMembers = async (req, res) => {
     });
   }
 };
-
 exports.expiringWithin3Days = async (req, res) => {
   const today = new Date();
   const nextThreeDays = new Date();

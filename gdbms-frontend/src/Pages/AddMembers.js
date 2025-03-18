@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Select, Button, DatePicker } from "antd"; // Import DatePicker from Ant Design
+import { Select, Button, DatePicker, Form, Input } from "antd"; // Import Form and Input from Ant Design
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import dayjs from "dayjs";
@@ -9,14 +9,7 @@ import "../Styles/AddMemberForm.css"; // Import a CSS file for the floating shap
 const { RangePicker } = DatePicker;
 
 const AddMemberForm = () => {
-  const [memberInfo, setMemberInfo] = useState({
-    name: "",
-    phoneNumber: "",
-    address: "",
-    joiningDate: dayjs(), // Default to today's date
-    memberType: "Add membership type",
-  });
-
+  const [form] = Form.useForm(); // Form instance for validation
   const [membershipOptions, setMembershipOptions] = useState([]);
 
   useEffect(() => {
@@ -41,24 +34,9 @@ const AddMemberForm = () => {
     fetchMemberships();
   }, []);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setMemberInfo((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSelectChange = (value) => {
-    setMemberInfo((prev) => ({ ...prev, memberType: value }));
-  };
-
-  // Handle joining date change
-  const handleJoiningDateChange = (date) => {
-    setMemberInfo((prev) => ({ ...prev, joiningDate: date }));
-  };
-
-  const handleSubmit = async () => {
+  const handleSubmit = async (values) => {
     try {
-      const { name, phoneNumber, address, memberType, joiningDate } =
-        memberInfo;
+      const { name, phoneNumber, address, memberType, joiningDate } = values;
 
       // Format the joiningDate to ISO string
       const formattedJoiningDate = joiningDate.toISOString();
@@ -79,13 +57,7 @@ const AddMemberForm = () => {
       toast.success(response.data.message);
 
       // Reset form fields
-      setMemberInfo({
-        name: "",
-        phoneNumber: "",
-        address: "",
-        joiningDate: dayjs(), // Reset to today's date
-        memberType: "",
-      });
+      form.resetFields();
     } catch (error) {
       toast.error(
         error.response?.data?.message ||
@@ -116,84 +88,97 @@ const AddMemberForm = () => {
           </p>
         </div>
 
-        {/* Name Input */}
-        <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium text-gray-700">Name</label>
-          <input
-            type="text"
+        <Form form={form} onFinish={handleSubmit} layout="vertical">
+          {/* Name Input */}
+          <Form.Item
+            label="Name"
             name="name"
-            value={memberInfo.name}
-            onChange={handleChange}
-            placeholder="Enter full name"
-            className="w-full py-2 px-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
+            rules={[
+              { required: true, message: "Please enter the member's name" },
+              {
+                pattern: /^[A-Za-z\s]+$/,
+                message: "Name should only contain letters and spaces",
+              },
+            ]}
+          >
+            <Input
+              placeholder="Enter full name"
+              className="w-full py-2 px-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </Form.Item>
 
-        {/* Phone Number Input */}
-        <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium text-gray-700">
-            Phone Number
-          </label>
-          <input
-            type="tel"
+          {/* Phone Number Input */}
+          <Form.Item
+            label="Phone Number"
             name="phoneNumber"
-            value={memberInfo.phoneNumber}
-            onChange={handleChange}
-            placeholder="Enter phone number"
-            className="w-full py-2 px-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
+            rules={[
+              { required: true, message: "Please enter the phone number" },
+              {
+                pattern: /^\d{10}$/,
+                message: "Phone number must be exactly 10 digits",
+              },
+            ]}
+          >
+            <Input
+              placeholder="Enter phone number"
+              className="w-full py-2 px-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </Form.Item>
 
-        {/* Address Input */}
-        <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium text-gray-700">Address</label>
-          <input
-            type="text"
+          {/* Address Input */}
+          <Form.Item
+            label="Address"
             name="address"
-            value={memberInfo.address}
-            onChange={handleChange}
-            placeholder="Enter address"
-            className="w-full py-2 px-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
+            rules={[{ required: true, message: "Please enter the address" }]}
+          >
+            <Input
+              placeholder="Enter address"
+              className="w-full py-2 px-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </Form.Item>
 
-        {/* Joining Date Input */}
-        <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium text-gray-700">
-            Joining Date
-          </label>
-          <DatePicker
-            value={memberInfo.joiningDate}
-            onChange={handleJoiningDateChange}
-            className="w-full"
-            format="YYYY-MM-DD" // Format the date display
-          />
-        </div>
+          {/* Joining Date Input */}
+          <Form.Item
+            label="Joining Date"
+            name="joiningDate"
+            rules={[
+              { required: true, message: "Please select the joining date" },
+            ]}
+          >
+            <DatePicker
+              className="w-full"
+              format="YYYY-MM-DD" // Format the date display
+            />
+          </Form.Item>
 
-        {/* Membership Type Select */}
-        <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium text-gray-700">
-            Membership Type
-          </label>
-          <Select
-            placeholder="Select membership type"
-            options={membershipOptions}
-            value={memberInfo.memberType}
-            onChange={handleSelectChange}
-            className="w-full"
-            dropdownStyle={{ backgroundColor: "white" }}
-            style={{ width: "100%" }}
-          />
-        </div>
+          {/* Membership Type Select */}
+          <Form.Item
+            label="Membership Type"
+            name="memberType"
+            rules={[
+              { required: true, message: "Please select a membership type" },
+            ]}
+          >
+            <Select
+              placeholder="Select membership type"
+              options={membershipOptions}
+              className="w-full"
+              dropdownStyle={{ backgroundColor: "white" }}
+              style={{ width: "100%" }}
+            />
+          </Form.Item>
 
-        {/* Submit Button */}
-        <Button
-          type="primary"
-          onClick={handleSubmit}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200"
-        >
-          Add Member
-        </Button>
+          {/* Submit Button */}
+          <Form.Item>
+            <Button
+              type="primary"
+              htmlType="submit"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200"
+            >
+              Add Member
+            </Button>
+          </Form.Item>
+        </Form>
       </div>
     </div>
   );

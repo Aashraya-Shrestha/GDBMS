@@ -84,7 +84,7 @@ const MemberList = () => {
   );
 
   return (
-    <div className="flex-1 flex-row px-4">
+    <div className="flex-1 flex-row px-4 pb-4">
       <h1 className="text-black text-3xl my-5 font-semibold">Member List</h1>
       <div style={{ display: "flex", gap: "10px", marginBottom: "16px" }}>
         <Input

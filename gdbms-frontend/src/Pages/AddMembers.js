@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { Select, Button, DatePicker, Form, Input } from "antd"; // Import Form and Input from Ant Design
+import { Select, Button, DatePicker, Form, Input } from "antd";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import dayjs from "dayjs";
 import axios from "axios";
-import "../Styles/AddMemberForm.css"; // Import a CSS file for the floating shapes
+import "../Styles/AddMemberForm.css"; // Import your CSS file
 
 const { RangePicker } = DatePicker;
 
@@ -54,6 +54,8 @@ const AddMemberForm = () => {
         memberData,
         { withCredentials: true }
       );
+
+      // Display success message
       toast.success(response.data.message);
 
       // Reset form fields

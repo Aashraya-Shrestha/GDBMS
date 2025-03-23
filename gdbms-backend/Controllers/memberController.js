@@ -1,5 +1,7 @@
 const Member = require("../Modals/member");
 const Membership = require("../Modals/membership");
+const qr = require("qr-image");
+const axios = require("axios");
 
 exports.getAllMember = async (req, res) => {
   try {
@@ -63,17 +65,60 @@ exports.addMember = async (req, res) => {
       lastPayment: parsedJoiningDate, // Set lastPayment to the joiningDate
       nextBillDate,
     });
+
+    // Save the new member to the database
+    await newMember.save();
+
+    // Generate a unique QR code for the member
+    const qrCodeData = JSON.stringify({
+      memberId: newMember._id,
+      name: newMember.name,
+      phoneNumber: newMember.phoneNumber,
+      gymId: newMember.gym,
+    });
+
+    const qrCode = qr.imageSync(qrCodeData, { type: "png" }); // Generate QR code as PNG buffer
+
+    // Upload the QR code to Cloudinary
+    const cloudinaryUrl = await uploadToCloudinary(qrCode);
+
+    // Save the Cloudinary URL in the member document
+    newMember.qrCodeUrl = cloudinaryUrl;
     await newMember.save();
 
     res.status(200).json({
       message: "Member has been successfully added",
       newMember,
+      qrCodeUrl: cloudinaryUrl, // Send the Cloudinary URL in the response
     });
   } catch (err) {
     res.status(500).json({
       error: "Server Error",
       details: err.message,
     });
+  }
+};
+
+// Function to upload QR code to Cloudinary
+const uploadToCloudinary = async (fileBuffer) => {
+  try {
+    const data = new FormData();
+    data.append(
+      "file",
+      `data:image/png;base64,${fileBuffer.toString("base64")}`
+    );
+    data.append("upload_preset", "gym-management"); // Replace with your Cloudinary upload preset
+    data.append("folder", "qr-codes"); // Optional: Organize QR codes in a folder
+
+    const response = await axios.post(
+      "https://api.cloudinary.com/v1_1/dilliqjeq/image/upload", // Replace with your Cloudinary cloud name
+      data
+    );
+
+    return response.data.secure_url; // Return the uploaded image URL
+  } catch (err) {
+    console.error("Error uploading QR code to Cloudinary:", err);
+    throw new Error("Failed to upload QR code to Cloudinary");
   }
 };
 
@@ -236,6 +281,7 @@ exports.getMemberDetail = async (req, res) => {
       member: {
         ...member.toObject(),
         membershipType, // Add membershipType to the member data
+        qrCodeUrl: member.qrCodeUrl, // Include the QR code URL
       },
     });
   } catch (err) {
@@ -246,7 +292,6 @@ exports.getMemberDetail = async (req, res) => {
     });
   }
 };
-
 exports.changeStatus = async (req, res) => {
   try {
     const { id } = req.params;

@@ -9,6 +9,7 @@ import {
   Form,
   Input,
   DatePicker,
+  Image,
 } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
@@ -187,8 +188,17 @@ const MemberDetail = () => {
       </Button>
       <Card className="shadow-lg p-6">
         <div className="flex flex-col md:flex-row items-center gap-8">
+          {/* Display QR Code */}
           <div className="w-52 h-52 bg-gray-200 rounded-md flex items-center justify-center">
-            <span className="text-gray-500 text-lg">Profile Image</span>
+            {member.qrCodeUrl ? (
+              <Image
+                src={member.qrCodeUrl}
+                alt="QR Code"
+                className="w-full h-full object-cover rounded-md"
+              />
+            ) : (
+              <span className="text-gray-500 text-lg">No QR Code</span>
+            )}
           </div>
 
           <div className="flex-1 space-y-4">

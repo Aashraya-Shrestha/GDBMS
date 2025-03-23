@@ -39,6 +39,9 @@ const memberSchema = mongoose.Schema(
       type: Date,
       required: true,
     },
+    qrCodeUrl: {
+      type: String, // Add this field to store the Cloudinary URL
+    },
   },
   {
     timestamps: true, // This adds createdAt and updatedAt

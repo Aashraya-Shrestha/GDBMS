@@ -2,6 +2,7 @@ const Member = require("../Modals/member");
 const Membership = require("../Modals/membership");
 const qr = require("qr-image");
 const axios = require("axios");
+const cron = require("node-cron");
 
 exports.getAllMember = async (req, res) => {
   try {
@@ -325,31 +326,38 @@ exports.updateMemberPlan = async (req, res) => {
     const { membership } = req.body; // Membership ID that is selected for renewal
     const { id } = req.params; // Member ID
 
+    // Find the membership data
     const membershipData = await Membership.findOne({
       gym: req.gym._id,
-      _id: membership, // Check if the membership exists
+      _id: membership,
     });
 
     if (!membershipData) {
-      return res.status(409).json({ error: "No such membership found" });
+      return res.status(404).json({ error: "No such membership found" });
     }
 
+    // Find the member
     const member = await Member.findOne({ gym: req.gym._id, _id: id });
     if (!member) {
-      return res.status(409).json({ error: "No such member found" });
+      return res.status(404).json({ error: "No such member found" });
     }
 
-    // Calculate the nextBillDate based on the member's joiningDate
-    const months = membershipData.months; // Get the number of months from the membership
-    const nextBillDate = addMonthsToDate(months, member.joiningDate);
+    // Calculate the new nextBillDate based on today's date or last payment date
+    const renewalDate = new Date();
+    const nextBillDate = addMonthsToDate(membershipData.months, renewalDate);
 
-    // Update the member's nextBillDate and lastPayment
+    // Update the member's details
+    member.membership = membership;
     member.nextBillDate = nextBillDate;
-    member.lastPayment = new Date(); // Set lastPayment to today
-    member.membership = membership; // Update membership plan
+    member.lastPayment = renewalDate;
+    member.status = "Active"; // Ensure status is active after renewal
+
     await member.save();
 
-    res.status(200).json({ message: "Member renewed successfully" });
+    res.status(200).json({
+      message: "Member renewed successfully",
+      member, // Send back the updated member data
+    });
   } catch (err) {
     console.log(err);
     res.status(500).json({
@@ -451,3 +459,380 @@ function addMonthsToDate(months, joiningDate) {
 
   return futureDate;
 }
+
+// Mark attendance for a member
+exports.markAttendance = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, date } = req.body;
+
+    const member = await Member.findOne({ _id: id, gym: req.gym._id });
+    if (!member) {
+      return res.status(404).json({ error: "No such member found" });
+    }
+
+    // Parse the date or use current date if not provided
+    const attendanceDate = date ? new Date(date) : new Date();
+    attendanceDate.setHours(0, 0, 0, 0);
+    const dateKey = attendanceDate.toISOString().split("T")[0];
+
+    // Update or create attendance record
+    const existingAttendanceIndex = member.attendance.findIndex(
+      (record) => new Date(record.date).toISOString().split("T")[0] === dateKey
+    );
+
+    if (existingAttendanceIndex >= 0) {
+      member.attendance[existingAttendanceIndex].status = status;
+    } else {
+      member.attendance.push({
+        date: attendanceDate,
+        status: status,
+      });
+    }
+
+    // Update current month attendance
+    if (!member.currentMonthAttendance) {
+      member.currentMonthAttendance = new Map();
+    }
+    member.currentMonthAttendance.set(dateKey, status);
+
+    await member.save();
+
+    res.status(200).json({
+      message: "Attendance marked successfully",
+      attendance: member.attendance,
+      currentMonthAttendance: Object.fromEntries(member.currentMonthAttendance),
+    });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({
+      error: "Server Error",
+      details: err.message,
+    });
+  }
+};
+
+// Get member attendance
+exports.getMemberAttendance = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { month, year } = req.query;
+
+    const member = await Member.findOne({ _id: id, gym: req.gym._id });
+    if (!member) {
+      return res.status(404).json({ error: "No such member found" });
+    }
+
+    // Filter attendance for the requested month and year
+    const filteredAttendance = member.attendance.filter((record) => {
+      const recordDate = new Date(record.date);
+      return (
+        recordDate.getMonth() === parseInt(month) &&
+        recordDate.getFullYear() === parseInt(year)
+      );
+    });
+
+    // Calculate attendance summary
+    const presentDays = filteredAttendance.filter(
+      (a) => a.status === "present"
+    ).length;
+    const absentDays = filteredAttendance.filter(
+      (a) => a.status === "absent"
+    ).length;
+    const totalDays = filteredAttendance.length;
+
+    res.status(200).json({
+      message: "Attendance fetched successfully",
+      attendance: filteredAttendance,
+      summary: {
+        presentDays,
+        absentDays,
+        totalDays,
+        attendanceRate:
+          totalDays > 0
+            ? ((presentDays / totalDays) * 100).toFixed(2) + "%"
+            : "0%",
+      },
+    });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({
+      error: "Server Error",
+      details: err.message,
+    });
+  }
+};
+
+// Get all members' attendance for today
+exports.getTodaysAttendance = async (req, res) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const members = await Member.find({ gym: req.gym._id }).populate(
+      "membership"
+    );
+
+    const todaysAttendance = members.map((member) => {
+      const todayRecord = member.attendance.find((record) => {
+        const recordDate = new Date(record.date);
+        return recordDate >= today && recordDate < tomorrow;
+      });
+
+      return {
+        _id: member._id,
+        name: member.name,
+        membershipType: member.membership?.name || "N/A",
+        status: todayRecord ? todayRecord.status : "hasnt checked in",
+        lastCheckedIn: todayRecord?.date || null,
+      };
+    });
+
+    res.status(200).json({
+      message: "Today's attendance fetched successfully",
+      attendance: todaysAttendance,
+      date: today,
+      totalMembers: members.length,
+      presentCount: todaysAttendance.filter((a) => a.status === "present")
+        .length,
+      absentCount: todaysAttendance.filter((a) => a.status === "absent").length,
+      notCheckedCount: todaysAttendance.filter(
+        (a) => a.status === "hasnt checked in"
+      ).length,
+    });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({
+      error: "Server Error",
+      details: err.message,
+    });
+  }
+};
+
+// Bulk update attendance for multiple members
+exports.bulkUpdateAttendance = async (req, res) => {
+  try {
+    const { date, updates } = req.body; // updates: [{ memberId, status }]
+
+    const attendanceDate = date ? new Date(date) : new Date();
+    const dateKey = attendanceDate.toISOString().split("T")[0];
+
+    const bulkOps = updates.map((update) => {
+      return {
+        updateOne: {
+          filter: {
+            _id: update.memberId,
+            gym: req.gym._id,
+          },
+          update: {
+            $set: {
+              "attendance.$[elem].status": update.status,
+              [`currentMonthAttendance.${dateKey}`]: update.status,
+            },
+          },
+          arrayFilters: [
+            {
+              "elem.date": {
+                $gte: new Date(attendanceDate.setHours(0, 0, 0, 0)),
+                $lt: new Date(attendanceDate.setHours(23, 59, 59, 999)),
+              },
+            },
+          ],
+          upsert: true,
+        },
+      };
+    });
+
+    await Member.bulkWrite(bulkOps);
+
+    res.status(200).json({
+      message: "Bulk attendance updated successfully",
+      updatedCount: updates.length,
+    });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({
+      error: "Server Error",
+      details: err.message,
+    });
+  }
+};
+
+exports.freezeAccount = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+
+    const member = await Member.findOne({ _id: id, gym: req.gym._id });
+    if (!member) {
+      return res.status(404).json({ error: "Member not found" });
+    }
+
+    if (member.freeze.isFrozen) {
+      return res.status(400).json({ error: "Account is already frozen" });
+    }
+
+    member.freeze = {
+      isFrozen: true,
+      freezeStartDate: new Date(),
+      freezeEndDate: null,
+      freezeReason: reason,
+      originalNextBillDate: member.nextBillDate,
+      lastUnfreezeDate: member.freeze?.lastUnfreezeDate, // Preserve last unfreeze date
+    };
+
+    await member.save();
+
+    res.status(200).json({
+      message: "Account frozen successfully",
+      member,
+    });
+  } catch (err) {
+    res.status(500).json({
+      error: "Server Error",
+      details: err.message,
+    });
+  }
+};
+
+exports.unfreezeAccount = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const member = await Member.findOne({ _id: id, gym: req.gym._id });
+    if (!member) {
+      return res.status(404).json({ error: "Member not found" });
+    }
+
+    if (!member.freeze.isFrozen) {
+      return res.status(400).json({ error: "Account is not frozen" });
+    }
+
+    const now = new Date();
+    const freezeStart = new Date(member.freeze.freezeStartDate);
+
+    // Check if this is a same-day unfreeze (within 24 hours)
+    const isSameDayUnfreeze =
+      now.getDate() === freezeStart.getDate() &&
+      now.getMonth() === freezeStart.getMonth() &&
+      now.getFullYear() === freezeStart.getFullYear();
+
+    let newNextBillDate = new Date(member.freeze.originalNextBillDate);
+    let frozenDays = 0;
+
+    if (!isSameDayUnfreeze) {
+      // Only add frozen days if it's not same-day unfreeze
+      frozenDays = Math.ceil((now - freezeStart) / (1000 * 60 * 60 * 24));
+      newNextBillDate.setDate(newNextBillDate.getDate() + frozenDays);
+    }
+
+    member.nextBillDate = newNextBillDate;
+    member.freeze = {
+      isFrozen: false,
+      freezeStartDate: null,
+      freezeEndDate: now,
+      freezeReason: null,
+      originalNextBillDate: null,
+      lastUnfreezeDate: now,
+    };
+
+    await member.save();
+
+    res.status(200).json({
+      message: "Account unfrozen successfully",
+      member,
+      frozenDays: isSameDayUnfreeze ? 0 : frozenDays,
+      newExpirationDate: newNextBillDate,
+      wasSameDayUnfreeze: isSameDayUnfreeze,
+    });
+  } catch (err) {
+    console.error("Error unfreezing account:", err);
+    res.status(500).json({
+      error: "Server Error",
+      details: err.message,
+    });
+  }
+};
+
+// Schedule a daily job to mark absent members (runs at 11:30 PM)
+cron.schedule(
+  "30 23 * * *",
+  async () => {
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      console.log(`Running daily attendance check at ${new Date()}`);
+
+      const activeMembers = await Member.find({
+        status: "Active",
+        "freeze.isFrozen": false,
+      });
+
+      let markedAbsentCount = 0;
+
+      for (const member of activeMembers) {
+        const hasCheckedIn = member.attendance.some((record) => {
+          const recordDate = new Date(record.date);
+          return (
+            recordDate.getDate() === today.getDate() &&
+            recordDate.getMonth() === today.getMonth() &&
+            recordDate.getFullYear() === today.getFullYear() &&
+            record.status === "present"
+          );
+        });
+
+        if (!hasCheckedIn) {
+          // Check if there's already an attendance record for today
+          const existingRecordIndex = member.attendance.findIndex((record) => {
+            const recordDate = new Date(record.date);
+            return (
+              recordDate.getDate() === today.getDate() &&
+              recordDate.getMonth() === today.getMonth() &&
+              recordDate.getFullYear() === today.getFullYear()
+            );
+          });
+
+          if (existingRecordIndex >= 0) {
+            // Update existing record to absent if not already present
+            if (member.attendance[existingRecordIndex].status !== "present") {
+              member.attendance[existingRecordIndex].status = "absent";
+            }
+          } else {
+            // Add new absent record
+            member.attendance.push({
+              date: today,
+              status: "absent",
+            });
+          }
+
+          // Update current month attendance map
+          const dateKey = today.toISOString().split("T")[0];
+          if (!member.currentMonthAttendance) {
+            member.currentMonthAttendance = new Map();
+          }
+          if (member.currentMonthAttendance.get(dateKey) !== "present") {
+            member.currentMonthAttendance.set(dateKey, "absent");
+          }
+
+          await member.save();
+          markedAbsentCount++;
+          console.log(
+            `Marked member ${member.name} as absent for ${today.toDateString()}`
+          );
+        }
+      }
+
+      console.log(
+        `Daily attendance check completed. Marked ${markedAbsentCount} members as absent.`
+      );
+    } catch (error) {
+      console.error("Error in daily attendance check:", error);
+    }
+  },
+  {
+    timezone: "Asia/Kathmandu", // Replace with your server's timezone
+  }
+);

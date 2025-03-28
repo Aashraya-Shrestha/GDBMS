@@ -1,5 +1,18 @@
 const mongoose = require("mongoose");
 
+const attendanceSchema = new mongoose.Schema({
+  date: {
+    type: Date,
+    required: true,
+    default: Date.now,
+  },
+  status: {
+    type: String,
+    enum: ["hasnt checked in", "present", "absent"],
+    default: "hasnt checked in",
+  },
+});
+
 const memberSchema = mongoose.Schema(
   {
     name: {
@@ -40,11 +53,24 @@ const memberSchema = mongoose.Schema(
       required: true,
     },
     qrCodeUrl: {
-      type: String, // Add this field to store the Cloudinary URL
+      type: String,
+    },
+    attendance: [attendanceSchema], // Array of daily attendance records
+    currentMonthAttendance: {
+      type: Map,
+      of: String, // "hasnt checked in", "present", "absent"
+      default: {},
+    },
+    freeze: {
+      isFrozen: { type: Boolean, default: false },
+      freezeStartDate: { type: Date },
+      freezeEndDate: { type: Date },
+      freezeReason: { type: String },
+      originalNextBillDate: { type: Date },
     },
   },
   {
-    timestamps: true, // This adds createdAt and updatedAt
+    timestamps: true,
   }
 );
 

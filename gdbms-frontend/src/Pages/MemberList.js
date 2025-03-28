@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { Row, Col, Modal, Form, Input, Button } from "antd";
+import { Row, Col, Modal, Form, Input, Button, Switch, Tag } from "antd";
 import ListCard from "../Components/ListCard";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
+import dayjs from "dayjs";
 
 const ColStyles = {
   padding: "10px",
@@ -20,6 +21,7 @@ const MemberList = () => {
     price: "",
   });
   const [members, setMembers] = useState([]);
+  const [today] = useState(dayjs().format("YYYY-MM-DD"));
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -76,6 +78,50 @@ const MemberList = () => {
     }
   };
 
+  const toggleAttendance = async (memberId, currentStatus) => {
+    try {
+      const newStatus = currentStatus === "present" ? "absent" : "present";
+
+      await axios.post(
+        `http://localhost:4000/members/mark-attendance/${memberId}`,
+        { status: newStatus },
+        { withCredentials: true }
+      );
+
+      // Update local state
+      setMembers((prevMembers) =>
+        prevMembers.map((member) => {
+          if (member._id === memberId) {
+            // Find today's attendance record
+            const todayRecordIndex = member.attendance.findIndex(
+              (record) => dayjs(record.date).format("YYYY-MM-DD") === today
+            );
+
+            const updatedAttendance = [...member.attendance];
+            if (todayRecordIndex >= 0) {
+              updatedAttendance[todayRecordIndex].status = newStatus;
+            } else {
+              updatedAttendance.push({
+                date: new Date(),
+                status: newStatus,
+              });
+            }
+
+            return {
+              ...member,
+              attendance: updatedAttendance,
+            };
+          }
+          return member;
+        })
+      );
+
+      toast.success(`Attendance marked as ${newStatus}`);
+    } catch (error) {
+      toast.error("Error updating attendance: " + error.message);
+    }
+  };
+
   // Filter members based on search query
   const filteredMembers = members.filter((member) =>
     Object.values(member).some((value) =>
@@ -104,9 +150,11 @@ const MemberList = () => {
       <Row
         style={{
           backgroundColor: "#1e2837",
+          textAlign: "center",
           color: "white",
           fontWeight: "bold",
           padding: "10px",
+          gap: "16px",
         }}
       >
         {[
@@ -114,30 +162,42 @@ const MemberList = () => {
           "Members Name",
           "Address",
           "Phone Number",
+          "Today's Attendance",
           "Expiring Date",
           "Member Details",
         ].map((header, index) => (
-          <Col key={index} span={4} style={ColStyles}>
+          <Col key={index} span={index === 4 ? 4 : 3} style={ColStyles}>
             {header}
           </Col>
         ))}
       </Row>
       {filteredMembers.length > 0 ? (
-        filteredMembers.map((item, index) => (
-          <ListCard
-            key={item._id}
-            index={index + 1} // Start indexing from 1
-            name={item.name}
-            address={item.address}
-            phoneNumber={item.phoneNumber}
-            expireDate={
-              item.nextBillDate
-                ? new Date(item.nextBillDate).toLocaleDateString("en-GB")
-                : "N/A"
-            }
-            memberDetail={() => handleViewMember(item._id)}
-          />
-        ))
+        filteredMembers.map((item, index) => {
+          // Find today's attendance record
+          const todayAttendance = item.attendance?.find(
+            (record) => dayjs(record.date).format("YYYY-MM-DD") === today
+          ) || { status: "hasnt checked in" };
+
+          return (
+            <ListCard
+              key={item._id}
+              index={index + 1}
+              name={item.name}
+              address={item.address}
+              phoneNumber={item.phoneNumber}
+              expireDate={
+                item.nextBillDate
+                  ? new Date(item.nextBillDate).toLocaleDateString("en-GB")
+                  : "N/A"
+              }
+              memberDetail={() => handleViewMember(item._id)}
+              attendanceStatus={todayAttendance.status}
+              onToggleAttendance={() =>
+                toggleAttendance(item._id, todayAttendance.status)
+              }
+            />
+          );
+        })
       ) : (
         <p>No members available</p>
       )}

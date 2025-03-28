@@ -25,4 +25,13 @@ router.put("/changeStatus/:id", auth, memberController.changeStatus);
 router.post("/updatePlan/:id", auth, memberController.updateMemberPlan);
 router.put("/editMember/:id", auth, memberController.editMember);
 
+// Attendance routes
+router.post("/mark-attendance/:id", auth, memberController.markAttendance);
+router.get("/attendance/:id", auth, memberController.getMemberAttendance);
+router.get("/todays-attendance", auth, memberController.getTodaysAttendance);
+router.post("/bulk-attendance", auth, memberController.bulkUpdateAttendance);
+
+router.post("/freeze-account/:id", auth, memberController.freezeAccount);
+router.post("/unfreeze-account/:id", auth, memberController.unfreezeAccount);
+
 module.exports = router;

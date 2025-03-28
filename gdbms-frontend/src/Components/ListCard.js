@@ -1,4 +1,4 @@
-import { Button, Col, Row } from "antd";
+import { Button, Col, Row, Switch, Tag } from "antd";
 
 const ListCard = ({
   index,
@@ -7,6 +7,8 @@ const ListCard = ({
   phoneNumber,
   expireDate,
   memberDetail,
+  attendanceStatus,
+  onToggleAttendance,
 }) => {
   const ColStyles = {
     padding: 12,
@@ -15,8 +17,19 @@ const ListCard = ({
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    minWidth: 100, // Ensures columns don't shrink too much
-    flex: 1, // Makes columns flexible
+    minWidth: 100,
+    flex: 1,
+  };
+
+  const getAttendanceTagColor = (status) => {
+    switch (status) {
+      case "present":
+        return "green";
+      case "absent":
+        return "red";
+      default:
+        return "orange";
+    }
   };
 
   return (
@@ -25,6 +38,17 @@ const ListCard = ({
       <Col style={ColStyles}>{name}</Col>
       <Col style={ColStyles}>{address}</Col>
       <Col style={ColStyles}>{phoneNumber}</Col>
+      <Col style={ColStyles}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <Tag color={getAttendanceTagColor(attendanceStatus)}>
+            {attendanceStatus}
+          </Tag>
+          <Switch
+            checked={attendanceStatus === "present"}
+            onChange={onToggleAttendance}
+          />
+        </div>
+      </Col>
       <Col style={ColStyles}>{expireDate}</Col>
       <Col style={ColStyles}>
         <Button onClick={memberDetail}>View</Button>

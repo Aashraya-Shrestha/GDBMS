@@ -48,10 +48,10 @@ const MemberDetail = () => {
   const [canToggleStatus, setCanToggleStatus] = useState(true);
   const [editedEmail, setEditedEmail] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [canRenew, setCanRenew] = useState(false);
 
   const navigate = useNavigate();
   const { id } = useParams();
-
   useEffect(() => {
     const fetchMemberDetails = async () => {
       try {
@@ -68,6 +68,9 @@ const MemberDetail = () => {
         // Check if membership is expired
         const isCurrentlyExpired = nextBillDate < now;
         setIsExpired(isCurrentlyExpired);
+
+        // Set canRenew based on expiration status
+        setCanRenew(isCurrentlyExpired);
 
         // Check if membership has been expired for more than a month
         const oneMonthAgo = new Date();
@@ -504,7 +507,7 @@ const MemberDetail = () => {
                     type="primary"
                     onClick={handleRenewClick}
                     className={status ? "bg-blue-600" : "bg-gray-400"}
-                    disabled={!status}
+                    disabled={!canRenew || member?.freeze?.isFrozen} // Disabled if can't renew or frozen
                   >
                     Renew Membership
                   </Button>

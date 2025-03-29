@@ -69,21 +69,26 @@ const MemberDetail = () => {
         const isCurrentlyExpired = nextBillDate < now;
         setIsExpired(isCurrentlyExpired);
 
-        // Automatically set status to Active if not expired
-        if (!isCurrentlyExpired && memberData.status === "Inactive") {
+        // Check if membership has been expired for more than a month
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+        const expiredOverMonth = nextBillDate < oneMonthAgo;
+
+        // If expired over a month and currently active, set to inactive
+        if (expiredOverMonth && memberData.status === "Active") {
           try {
             // Update status in backend
-            const updateResponse = await axios.put(
+            await axios.put(
               `http://localhost:4000/members/changeStatus/${id}`,
-              { status: "Active" },
+              { status: "Inactive" },
               { withCredentials: true }
             );
 
-            // Update local state with active status
-            setMember({ ...memberData, status: "Active" });
-            setStatus(true);
+            // Update local state with inactive status
+            setMember({ ...memberData, status: "Inactive" });
+            setStatus(false);
             message.info(
-              "Membership not expired - status automatically set to Active"
+              "Membership expired over a month - status automatically set to Inactive"
             );
           } catch (updateError) {
             console.error("Error updating status:", updateError);
@@ -92,23 +97,15 @@ const MemberDetail = () => {
             setStatus(memberData.status === "Active");
           }
         } else {
-          // Use current status from backend
+          // Otherwise keep current status
           setMember(memberData);
           setStatus(memberData.status === "Active");
         }
 
         setEditedJoiningDate(dayjs(memberData.joiningDate));
 
-        // Check if membership has been expired for more than a month
-        const oneMonthAgo = new Date();
-        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-        const expiredOverMonth = nextBillDate < oneMonthAgo;
-
-        // Can toggle status if not expired over a month or if already inactive
-        setCanToggleStatus(
-          !expiredOverMonth ||
-            (expiredOverMonth && memberData.status === "Inactive")
-        );
+        // Always allow manual toggle regardless of expiration status
+        setCanToggleStatus(true);
       } catch (error) {
         console.error("Error fetching member details:", error);
         toast.error("Failed to load member details");
@@ -489,9 +486,7 @@ const MemberDetail = () => {
                   <Switch
                     checked={status}
                     onChange={handleStatusChange}
-                    disabled={
-                      !canToggleStatus || member?.freeze?.isFrozen || !isExpired
-                    }
+                    disabled={member?.freeze?.isFrozen} // Only disable if frozen
                   />
                   <span className="text-xl">
                     {status ? "Active" : "Inactive"}

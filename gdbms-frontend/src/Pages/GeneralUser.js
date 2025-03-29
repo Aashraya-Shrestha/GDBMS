@@ -1,14 +1,24 @@
 import React, { useEffect, useState } from "react";
-import { Row, Col, Input } from "antd";
+import { Row, Col, Input, Button, Switch, Tag } from "antd";
 import ListCard from "../Components/ListCard";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
+import { toast, ToastContainer } from "react-toastify";
+import dayjs from "dayjs";
+
+const ColStyles = {
+  padding: "10px",
+  borderLeft: "1px solid white",
+  textAlign: "center",
+};
 
 const GeneralUser = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [header, setHeader] = useState("General Users");
   const [members, setMembers] = useState([]);
+  const [today] = useState(dayjs().format("YYYY-MM-DD"));
 
   useEffect(() => {
     const func = sessionStorage.getItem("func");
@@ -40,9 +50,10 @@ const GeneralUser = () => {
       endpoints[func] || "http://localhost:4000/members/all-members";
     try {
       const response = await axios.get(endpoint, { withCredentials: true });
-      setMembers(response.data.members);
+      setMembers(response.data.members || response.data.members);
     } catch (error) {
       console.error("Error fetching members:", error);
+      toast.error("Failed to load members");
     }
   };
 
@@ -50,51 +61,122 @@ const GeneralUser = () => {
     navigate(`/member/${id}`);
   };
 
+  const toggleAttendance = async (memberId, currentStatus) => {
+    try {
+      const newStatus = currentStatus === "present" ? "absent" : "present";
+
+      await axios.post(
+        `http://localhost:4000/members/mark-attendance/${memberId}`,
+        { status: newStatus },
+        { withCredentials: true }
+      );
+
+      // Update local state
+      setMembers((prevMembers) =>
+        prevMembers.map((member) => {
+          if (member._id === memberId) {
+            // Find today's attendance record
+            const todayRecordIndex = member.attendance?.findIndex(
+              (record) => dayjs(record.date).format("YYYY-MM-DD") === today
+            );
+
+            const updatedAttendance = [...(member.attendance || [])];
+            if (todayRecordIndex >= 0) {
+              updatedAttendance[todayRecordIndex].status = newStatus;
+            } else {
+              updatedAttendance.push({
+                date: new Date(),
+                status: newStatus,
+              });
+            }
+
+            return {
+              ...member,
+              attendance: updatedAttendance,
+            };
+          }
+          return member;
+        })
+      );
+
+      toast.success(`Attendance marked as ${newStatus}`);
+    } catch (error) {
+      toast.error("Error updating attendance: " + error.message);
+    }
+  };
+
   const filteredMembers = members.filter((member) =>
     Object.values(member).some((value) =>
-      value.toString().toLowerCase().includes(searchQuery.toLowerCase())
+      value?.toString().toLowerCase().includes(searchQuery.toLowerCase())
     )
   );
 
+  const getAttendanceTagColor = (status) => {
+    switch (status) {
+      case "present":
+        return "green";
+      case "absent":
+        return "red";
+      default:
+        return "orange";
+    }
+  };
+
   return (
-    <div className="flex-1 px-6 py-4">
-      <h1 className="text-black text-3xl font-semibold mb-6 text-center">
+    <div className="flex-1 flex-row px-4 pb-4">
+      <h1 className="text-black text-3xl my-5 font-semibold text-center">
         {header}
       </h1>
-      <div className="flex justify-center mb-6">
+      <div
+        style={{
+          display: "flex",
+          gap: "10px",
+          marginBottom: "16px",
+          justifyContent: "center",
+        }}
+      >
         <Input
           placeholder="Search members..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          style={{ width: "50%", padding: "10px" }}
+          style={{ width: "60%" }}
         />
       </div>
-      <div className="bg-gray-800 text-white font-bold text-lg rounded-t-md overflow-hidden">
-        <Row className="p-3 text-center gap-14">
-          {[
-            "Index",
-            "Member Name",
-            "Address",
-            "Phone Number",
-            "Expiring Date",
-            "Details",
-          ].map((header, index) => (
-            <Col
-              key={index}
-              span={3}
-              className="px-2 py-1 border-r last:border-r-0"
-            >
-              {header}
-            </Col>
-          ))}
-        </Row>
-      </div>
-      <div className="bg-white divide-y divide-gray-300 rounded-b-md">
-        {filteredMembers.length > 0 ? (
-          filteredMembers.map((item, index) => (
+      <Row
+        style={{
+          backgroundColor: "#1e2837",
+          textAlign: "center",
+          color: "white",
+          fontWeight: "bold",
+          padding: "10px",
+          gap: "16px",
+        }}
+      >
+        {[
+          "Index",
+          "Member Name",
+          "Address",
+          "Phone Number",
+          "Today's Attendance",
+          "Expiring Date",
+          "Details",
+        ].map((header, index) => (
+          <Col key={index} span={index === 4 ? 4 : 3} style={ColStyles}>
+            {header}
+          </Col>
+        ))}
+      </Row>
+      {filteredMembers.length > 0 ? (
+        filteredMembers.map((item, index) => {
+          // Find today's attendance record
+          const todayAttendance = item.attendance?.find(
+            (record) => dayjs(record.date).format("YYYY-MM-DD") === today
+          ) || { status: "hasnt checked in" };
+
+          return (
             <ListCard
               key={item._id}
-              index={index + 1} // Start index from 1
+              index={index + 1}
               name={item.name}
               address={item.address}
               phoneNumber={item.phoneNumber}
@@ -104,12 +186,17 @@ const GeneralUser = () => {
                   : "N/A"
               }
               memberDetail={() => handleViewMember(item._id)}
+              attendanceStatus={todayAttendance.status}
+              onToggleAttendance={() =>
+                toggleAttendance(item._id, todayAttendance.status)
+              }
             />
-          ))
-        ) : (
-          <p className="text-center py-4">No members available</p>
-        )}
-      </div>
+          );
+        })
+      ) : (
+        <p className="text-center py-4">No members available</p>
+      )}
+      <ToastContainer />
     </div>
   );
 };

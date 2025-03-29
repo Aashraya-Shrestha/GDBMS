@@ -46,6 +46,7 @@ const MemberDetail = () => {
   const [isUnfreezeModalVisible, setIsUnfreezeModalVisible] = useState(false);
   const [isExpired, setIsExpired] = useState(false);
   const [canToggleStatus, setCanToggleStatus] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
 
   const navigate = useNavigate();
   const { id } = useParams();
@@ -53,35 +54,65 @@ const MemberDetail = () => {
   useEffect(() => {
     const fetchMemberDetails = async () => {
       try {
+        setIsLoading(true);
         const response = await axios.get(
           `http://localhost:4000/members/member-detail/${id}`,
           { withCredentials: true }
         );
-        setMember(response.data.member);
-        setStatus(response.data.member.status === "Active");
-        setEditedJoiningDate(dayjs(response.data.member.joiningDate));
 
-        // Check if membership has expired for more than a month
+        const memberData = response.data.member;
         const now = new Date();
-        const nextBillDate = new Date(response.data.member.nextBillDate);
+        const nextBillDate = new Date(memberData.nextBillDate);
+
+        // Check if membership is expired
+        const isCurrentlyExpired = nextBillDate < now;
+        setIsExpired(isCurrentlyExpired);
+
+        // Automatically set status to Active if not expired
+        if (!isCurrentlyExpired && memberData.status === "Inactive") {
+          try {
+            // Update status in backend
+            const updateResponse = await axios.put(
+              `http://localhost:4000/members/changeStatus/${id}`,
+              { status: "Active" },
+              { withCredentials: true }
+            );
+
+            // Update local state with active status
+            setMember({ ...memberData, status: "Active" });
+            setStatus(true);
+            message.info(
+              "Membership not expired - status automatically set to Active"
+            );
+          } catch (updateError) {
+            console.error("Error updating status:", updateError);
+            // If update fails, use the original data
+            setMember(memberData);
+            setStatus(memberData.status === "Active");
+          }
+        } else {
+          // Use current status from backend
+          setMember(memberData);
+          setStatus(memberData.status === "Active");
+        }
+
+        setEditedJoiningDate(dayjs(memberData.joiningDate));
+
+        // Check if membership has been expired for more than a month
         const oneMonthAgo = new Date();
         oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-
         const expiredOverMonth = nextBillDate < oneMonthAgo;
-        setIsExpired(expiredOverMonth);
 
-        // Check if we can toggle the status
-        const canToggle =
+        // Can toggle status if not expired over a month or if already inactive
+        setCanToggleStatus(
           !expiredOverMonth ||
-          (expiredOverMonth && response.data.member.status === "Inactive");
-        setCanToggleStatus(canToggle);
-
-        // If expired over a month and still active, automatically set to inactive
-        if (expiredOverMonth && response.data.member.status === "Active") {
-          handleAutoInactive();
-        }
+            (expiredOverMonth && memberData.status === "Inactive")
+        );
       } catch (error) {
         console.error("Error fetching member details:", error);
+        toast.error("Failed to load member details");
+      } finally {
+        setIsLoading(false);
       }
     };
     fetchMemberDetails();
@@ -112,27 +143,6 @@ const MemberDetail = () => {
       fetchAttendanceData();
     }
   }, [member, monthFilter, yearFilter]);
-
-  const handleAutoInactive = async () => {
-    try {
-      const response = await axios.put(
-        `http://localhost:4000/members/changeStatus/${id}`,
-        { status: "Inactive" },
-        { withCredentials: true }
-      );
-
-      setStatus(false);
-      setMember({
-        ...member,
-        status: "Inactive",
-      });
-      message.warning(
-        "Membership expired for over a month. Status automatically set to Inactive."
-      );
-    } catch (error) {
-      console.error("Error updating status automatically:", error);
-    }
-  };
 
   const fetchAttendanceData = async () => {
     try {
@@ -207,32 +217,25 @@ const MemberDetail = () => {
     }
 
     try {
+      setIsLoading(true);
       const response = await axios.post(
         `http://localhost:4000/members/updatePlan/${id}`,
-        { membership: membershipType }, // Only send membership ID
+        { membership: membershipType },
         { withCredentials: true }
       );
 
-      toast.success("Membership has been renewed");
+      // After renewal, membership is automatically active
+      const updatedMember = response.data.member;
+      setMember(updatedMember);
+      setStatus(true); // Force status to active after renewal
+      setIsRenewing(false);
 
-      // Update local state with the renewed member data
-      setMember(response.data.member);
-      setStatus(true); // Set status to active
-      setIsRenewing(false); // Close the renewal form
-
-      // Optionally refresh the membership options
-      const membershipsResponse = await axios.get(
-        "http://localhost:4000/plans/get-membership",
-        { withCredentials: true }
-      );
-      const memberships = membershipsResponse.data.membership.map((m) => ({
-        label: `${m.months} Month Membership - ${m.price}`,
-        value: m._id,
-      }));
-      setMembershipOptions(memberships);
+      toast.success("Membership renewed and status set to Active");
     } catch (error) {
       console.error("Error renewing membership:", error);
       toast.error(error.response?.data?.error || "Failed to renew membership");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -255,10 +258,18 @@ const MemberDetail = () => {
   };
 
   const handleStatusChange = async (checked) => {
-    // Prevent toggling to inactive if membership hasn't expired
-    if (!checked && !isExpired) {
-      message.warning("Cannot set to Inactive until membership has expired");
-      return;
+    // If trying to set to inactive, check if allowed
+    if (!checked) {
+      const now = new Date();
+      const nextBillDate = new Date(member.nextBillDate);
+
+      // Prevent setting to inactive if membership hasn't expired
+      if (nextBillDate > now) {
+        message.warning(
+          "Cannot set to Inactive - membership hasn't expired yet"
+        );
+        return;
+      }
     }
 
     try {
@@ -269,7 +280,7 @@ const MemberDetail = () => {
         { withCredentials: true }
       );
 
-      toast.success("Status updated successfully");
+      toast.success(`Status updated to ${newStatus}`);
       setStatus(checked);
       setMember({
         ...member,
@@ -396,8 +407,12 @@ const MemberDetail = () => {
 
   const stats = calculateAttendanceStats();
 
+  if (isLoading) {
+    return <div className="w-5/6 mx-auto p-5">Loading member details...</div>;
+  }
+
   if (!member) {
-    return <div>Loading...</div>;
+    return <div className="w-5/6 mx-auto p-5">Member not found</div>;
   }
 
   return (
@@ -468,7 +483,9 @@ const MemberDetail = () => {
                   <Switch
                     checked={status}
                     onChange={handleStatusChange}
-                    disabled={!canToggleStatus || member?.freeze?.isFrozen}
+                    disabled={
+                      !canToggleStatus || member?.freeze?.isFrozen || !isExpired
+                    }
                   />
                   <span className="text-xl">
                     {status ? "Active" : "Inactive"}
@@ -545,6 +562,7 @@ const MemberDetail = () => {
                       type="primary"
                       onClick={handleSave}
                       className="bg-green-600"
+                      loading={isLoading}
                     >
                       Save
                     </Button>

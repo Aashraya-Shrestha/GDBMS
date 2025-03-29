@@ -78,12 +78,12 @@ const MemberList = () => {
     }
   };
 
-  const toggleAttendance = async (memberId, currentStatus) => {
+  const toggleAttendance = async (id, currentStatus) => {
     try {
       const newStatus = currentStatus === "present" ? "absent" : "present";
 
       await axios.post(
-        `http://localhost:4000/members/mark-attendance/${memberId}`,
+        `http://localhost:4000/members/mark-attendance/${id}`,
         { status: newStatus },
         { withCredentials: true }
       );
@@ -91,7 +91,7 @@ const MemberList = () => {
       // Update local state
       setMembers((prevMembers) =>
         prevMembers.map((member) => {
-          if (member._id === memberId) {
+          if (member._id === id) {
             // Find today's attendance record
             const todayRecordIndex = member.attendance.findIndex(
               (record) => dayjs(record.date).format("YYYY-MM-DD") === today

@@ -756,16 +756,18 @@ exports.unfreezeAccount = async (req, res) => {
   }
 };
 
-// Schedule a daily job to mark absent members (runs at 11:30 PM)
 cron.schedule(
   "30 23 * * *",
   async () => {
     try {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
 
       console.log(`Running daily attendance check at ${new Date()}`);
 
+      // Find all active, non-frozen members
       const activeMembers = await Member.find({
         status: "Active",
         "freeze.isFrozen": false,
@@ -774,38 +776,24 @@ cron.schedule(
       let markedAbsentCount = 0;
 
       for (const member of activeMembers) {
-        const hasCheckedIn = member.attendance.some((record) => {
+        // Check if member has any attendance record for today
+        const todayAttendance = member.attendance.find((record) => {
           const recordDate = new Date(record.date);
-          return (
-            recordDate.getDate() === today.getDate() &&
-            recordDate.getMonth() === today.getMonth() &&
-            recordDate.getFullYear() === today.getFullYear() &&
-            record.status === "present"
-          );
+          return recordDate >= today && recordDate < tomorrow;
         });
 
-        if (!hasCheckedIn) {
-          // Check if there's already an attendance record for today
-          const existingRecordIndex = member.attendance.findIndex((record) => {
-            const recordDate = new Date(record.date);
-            return (
-              recordDate.getDate() === today.getDate() &&
-              recordDate.getMonth() === today.getMonth() &&
-              recordDate.getFullYear() === today.getFullYear()
-            );
-          });
-
-          if (existingRecordIndex >= 0) {
-            // Update existing record to absent if not already present
-            if (member.attendance[existingRecordIndex].status !== "present") {
-              member.attendance[existingRecordIndex].status = "absent";
-            }
-          } else {
-            // Add new absent record
+        // If no record exists for today or record exists but status isn't 'present'
+        if (!todayAttendance || todayAttendance.status !== "present") {
+          // If record doesn't exist, create new absent record
+          if (!todayAttendance) {
             member.attendance.push({
               date: today,
               status: "absent",
             });
+          }
+          // If record exists but isn't 'present', update to 'absent'
+          else if (todayAttendance.status !== "present") {
+            todayAttendance.status = "absent";
           }
 
           // Update current month attendance map
@@ -813,9 +801,7 @@ cron.schedule(
           if (!member.currentMonthAttendance) {
             member.currentMonthAttendance = new Map();
           }
-          if (member.currentMonthAttendance.get(dateKey) !== "present") {
-            member.currentMonthAttendance.set(dateKey, "absent");
-          }
+          member.currentMonthAttendance.set(dateKey, "absent");
 
           await member.save();
           markedAbsentCount++;

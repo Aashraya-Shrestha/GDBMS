@@ -1,26 +1,17 @@
 import { Button, Col, Row, Switch, Tag } from "antd";
+import PropTypes from "prop-types";
 
 const ListCard = ({
-  index,
-  name,
-  address,
-  phoneNumber,
-  expireDate,
-  memberDetail,
-  attendanceStatus,
-  onToggleAttendance,
+  index = 0,
+  name = "",
+  address = "",
+  phoneNumber = "",
+  expireDate = "N/A",
+  memberDetail = () => {},
+  attendanceStatus = "hasnt checked in",
+  onToggleAttendance = () => {},
+  colWidths = [50, 150, 200, 150, 200, 150, 100],
 }) => {
-  const ColStyles = {
-    padding: 12,
-    borderBottom: "1px solid lightgray",
-    backgroundColor: "#EAF1F1",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    minWidth: 100,
-    flex: 1,
-  };
-
   const getAttendanceTagColor = (status) => {
     switch (status) {
       case "present":
@@ -32,29 +23,124 @@ const ListCard = ({
     }
   };
 
+  const safeColWidths =
+    Array.isArray(colWidths) && colWidths.length === 7
+      ? colWidths
+      : [50, 150, 200, 150, 200, 150, 100];
+
   return (
-    <Row style={{ display: "flex", width: "100%" }}>
-      <Col style={ColStyles}>{index}</Col>
-      <Col style={ColStyles}>{name}</Col>
-      <Col style={ColStyles}>{address}</Col>
-      <Col style={ColStyles}>{phoneNumber}</Col>
-      <Col style={ColStyles}>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <Tag color={getAttendanceTagColor(attendanceStatus)}>
-            {attendanceStatus}
-          </Tag>
-          <Switch
-            checked={attendanceStatus === "present"}
-            onChange={onToggleAttendance}
-          />
-        </div>
+    <Row
+      style={{
+        display: "flex",
+        width: "100%",
+        padding: "12px 0",
+        borderBottom: "1px solid lightgray",
+        backgroundColor: "#EAF1F1",
+        margin: 0,
+      }}
+    >
+      <Col
+        style={{
+          flex: `0 0 ${safeColWidths[0]}px`,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          padding: "0 8px",
+        }}
+      >
+        {index}
       </Col>
-      <Col style={ColStyles}>{expireDate}</Col>
-      <Col style={ColStyles}>
+      <Col
+        style={{
+          flex: `0 0 ${safeColWidths[1]}px`,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          padding: "0 8px",
+        }}
+      >
+        {name}
+      </Col>
+      <Col
+        style={{
+          flex: `0 0 ${safeColWidths[2]}px`,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          padding: "0 8px",
+        }}
+      >
+        {address}
+      </Col>
+      <Col
+        style={{
+          flex: `0 0 ${safeColWidths[3]}px`,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          padding: "0 8px",
+        }}
+      >
+        {phoneNumber}
+      </Col>
+      <Col
+        style={{
+          flex: `0 0 ${safeColWidths[4]}px`,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          gap: "8px",
+          padding: "0 8px",
+        }}
+      >
+        <Tag color={getAttendanceTagColor(attendanceStatus)}>
+          {attendanceStatus}
+        </Tag>
+        <Switch
+          checked={attendanceStatus === "present"}
+          onChange={onToggleAttendance}
+        />
+      </Col>
+      <Col
+        style={{
+          flex: `0 0 ${safeColWidths[5]}px`,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          padding: "0 8px",
+        }}
+      >
+        {expireDate}
+      </Col>
+      <Col
+        style={{
+          flex: `0 0 ${safeColWidths[6]}px`,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          padding: "0 8px",
+        }}
+      >
         <Button onClick={memberDetail}>View</Button>
       </Col>
     </Row>
   );
+};
+
+ListCard.propTypes = {
+  index: PropTypes.number,
+  name: PropTypes.string,
+  address: PropTypes.string,
+  phoneNumber: PropTypes.string,
+  expireDate: PropTypes.string,
+  memberDetail: PropTypes.func,
+  attendanceStatus: PropTypes.string,
+  onToggleAttendance: PropTypes.func,
+  colWidths: PropTypes.arrayOf(PropTypes.number),
+};
+
+ListCard.defaultProps = {
+  colWidths: [50, 150, 200, 150, 200, 150, 100],
 };
 
 export default ListCard;

@@ -6,12 +6,6 @@ import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import dayjs from "dayjs";
 
-const ColStyles = {
-  padding: "10px",
-  borderLeft: "1px solid white",
-  textAlign: "center",
-};
-
 const GeneralUser = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -19,6 +13,17 @@ const GeneralUser = () => {
   const [header, setHeader] = useState("General Users");
   const [members, setMembers] = useState([]);
   const [today] = useState(dayjs().format("YYYY-MM-DD"));
+
+  // Column configuration
+  const columns = [
+    { title: "Index", width: 80 },
+    { title: "Member Name", width: 200 },
+    { title: "Address", width: 200 },
+    { title: "Phone Number", width: 150 },
+    { title: "Today's Attendance", width: 250 },
+    { title: "Expiring Date", width: 150 },
+    { title: "Details", width: 150 },
+  ];
 
   useEffect(() => {
     const func = sessionStorage.getItem("func");
@@ -71,11 +76,9 @@ const GeneralUser = () => {
         { withCredentials: true }
       );
 
-      // Update local state
       setMembers((prevMembers) =>
         prevMembers.map((member) => {
           if (member._id === memberId) {
-            // Find today's attendance record
             const todayRecordIndex = member.attendance?.findIndex(
               (record) => dayjs(record.date).format("YYYY-MM-DD") === today
             );
@@ -111,17 +114,6 @@ const GeneralUser = () => {
     )
   );
 
-  const getAttendanceTagColor = (status) => {
-    switch (status) {
-      case "present":
-        return "green";
-      case "absent":
-        return "red";
-      default:
-        return "orange";
-    }
-  };
-
   return (
     <div className="flex-1 flex-row px-4 pb-4">
       <h1 className="text-black text-3xl my-5 font-semibold text-center">
@@ -142,33 +134,39 @@ const GeneralUser = () => {
           style={{ width: "60%" }}
         />
       </div>
+
+      {/* Header Row */}
       <Row
         style={{
           backgroundColor: "#1e2837",
-          textAlign: "center",
           color: "white",
           fontWeight: "bold",
-          padding: "10px",
-          gap: "16px",
+          padding: "12px 0",
+          margin: 0,
+          width: "100%",
+          display: "flex",
         }}
       >
-        {[
-          "Index",
-          "Member Name",
-          "Address",
-          "Phone Number",
-          "Today's Attendance",
-          "Expiring Date",
-          "Details",
-        ].map((header, index) => (
-          <Col key={index} span={index === 4 ? 4 : 3} style={ColStyles}>
-            {header}
+        {columns.map((col, index) => (
+          <Col
+            key={index}
+            style={{
+              padding: "0 8px",
+              textAlign: "center",
+              flex: `0 0 ${col.width}px`,
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            {col.title}
           </Col>
         ))}
       </Row>
+
+      {/* Member Rows */}
       {filteredMembers.length > 0 ? (
         filteredMembers.map((item, index) => {
-          // Find today's attendance record
           const todayAttendance = item.attendance?.find(
             (record) => dayjs(record.date).format("YYYY-MM-DD") === today
           ) || { status: "hasnt checked in" };
@@ -190,11 +188,21 @@ const GeneralUser = () => {
               onToggleAttendance={() =>
                 toggleAttendance(item._id, todayAttendance.status)
               }
+              colWidths={columns.map((col) => col.width)}
             />
           );
         })
       ) : (
-        <p className="text-center py-4">No members available</p>
+        <div
+          style={{
+            padding: "20px",
+            textAlign: "center",
+            backgroundColor: "#EAF1F1",
+            borderBottom: "1px solid lightgray",
+          }}
+        >
+          No members available
+        </div>
       )}
       <ToastContainer />
     </div>

@@ -6,12 +6,6 @@ import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import dayjs from "dayjs";
 
-const ColStyles = {
-  padding: "10px",
-
-  textAlign: "center",
-};
-
 const MemberList = () => {
   const [isAddMembershipModalVisible, setIsAddMembershipModalVisible] =
     useState(false);
@@ -25,7 +19,17 @@ const MemberList = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Check if the filter is set to "active"
+  // Column configuration
+  const columns = [
+    { title: "Index", width: 80 },
+    { title: "Member's Name", width: 200 },
+    { title: "Address", width: 200 },
+    { title: "Phone Number", width: 150 },
+    { title: "Today's Attendance", width: 250 },
+    { title: "Expiring Date", width: 150 },
+    { title: "Actions", width: 150 },
+  ];
+
   const showActiveMembers = location.state?.filter === "active";
 
   useEffect(() => {
@@ -33,11 +37,8 @@ const MemberList = () => {
       try {
         const response = await axios.get(
           "http://localhost:4000/members/all-members",
-          {
-            withCredentials: true,
-          }
+          { withCredentials: true }
         );
-        // Filter out inactive members if showActiveMembers is true
         const filteredMembers = showActiveMembers
           ? response.data.members.filter((member) => member.status === "Active")
           : response.data.members;
@@ -88,11 +89,9 @@ const MemberList = () => {
         { withCredentials: true }
       );
 
-      // Update local state
       setMembers((prevMembers) =>
         prevMembers.map((member) => {
           if (member._id === id) {
-            // Find today's attendance record
             const todayRecordIndex = member.attendance.findIndex(
               (record) => dayjs(record.date).format("YYYY-MM-DD") === today
             );
@@ -122,7 +121,6 @@ const MemberList = () => {
     }
   };
 
-  // Filter members based on search query
   const filteredMembers = members.filter((member) =>
     Object.values(member).some((value) =>
       value.toString().toLowerCase().includes(searchQuery.toLowerCase())
@@ -147,33 +145,39 @@ const MemberList = () => {
           Add Membership
         </Button>
       </div>
+
+      {/* Header Row */}
       <Row
         style={{
           backgroundColor: "#1e2837",
-          textAlign: "center",
           color: "white",
           fontWeight: "bold",
-          padding: "10px",
-          gap: "16px",
+          padding: "12px 0",
+          margin: 0,
+          width: "100%",
+          display: "flex",
         }}
       >
-        {[
-          "Index",
-          "Members Name",
-          "Address",
-          "Phone Number",
-          "Today's Attendance",
-          "Expiring Date",
-          "Member Details",
-        ].map((header, index) => (
-          <Col key={index} span={index === 4 ? 4 : 3} style={ColStyles}>
-            {header}
+        {columns.map((col, index) => (
+          <Col
+            key={index}
+            style={{
+              padding: "0 8px",
+              textAlign: "center",
+              flex: `0 0 ${col.width}px`,
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            {col.title}
           </Col>
         ))}
       </Row>
+
+      {/* Member Rows */}
       {filteredMembers.length > 0 ? (
         filteredMembers.map((item, index) => {
-          // Find today's attendance record
           const todayAttendance = item.attendance?.find(
             (record) => dayjs(record.date).format("YYYY-MM-DD") === today
           ) || { status: "hasnt checked in" };
@@ -195,12 +199,23 @@ const MemberList = () => {
               onToggleAttendance={() =>
                 toggleAttendance(item._id, todayAttendance.status)
               }
+              colWidths={columns.map((col) => col.width)}
             />
           );
         })
       ) : (
-        <p>No members available</p>
+        <div
+          style={{
+            padding: "20px",
+            textAlign: "center",
+            backgroundColor: "#EAF1F1",
+            borderBottom: "1px solid lightgray",
+          }}
+        >
+          No members available
+        </div>
       )}
+
       <Modal
         title="Add Membership"
         open={isAddMembershipModalVisible}

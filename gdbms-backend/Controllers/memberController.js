@@ -3,6 +3,44 @@ const Membership = require("../Modals/membership");
 const qr = require("qr-image");
 const axios = require("axios");
 const cron = require("node-cron");
+const nodemailer = require("nodemailer");
+require("dotenv").config();
+
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.SENDER_EMAIL,
+    pass: process.env.EMAIL_PASSWORD,
+  },
+});
+
+// Function to send QR code email
+const sendQRCodeEmail = async (email, name, qrCodeUrl) => {
+  try {
+    const mailOptions = {
+      from: process.env.SENDER_EMAIL,
+      to: email,
+      subject: "Your Gym Membership QR Code",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #2563eb;">Welcome to Our Gym, ${name}!</h2>
+          <p>Your membership QR code is attached below. Please present this QR code when checking in at the gym.</p>
+          <div style="text-align: center; margin: 20px 0;">
+            <img src="${qrCodeUrl}" alt="Membership QR Code" style="max-width: 200px;"/>
+          </div>
+          <p>If you have any questions, please contact our support team.</p>
+          <p>Best regards,<br/>The Gym Team</p>
+        </div>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    return { success: true, message: "Email sent successfully" };
+  } catch (error) {
+    console.error("Error sending QR code email:", error);
+    return { success: false, error: "Failed to send email" };
+  }
+};
 
 exports.getAllMember = async (req, res) => {
   try {
@@ -26,14 +64,26 @@ exports.getAllMember = async (req, res) => {
 
 exports.addMember = async (req, res) => {
   try {
-    const { name, address, phoneNumber, membership, joiningDate } = req.body;
+    const { name, address, phoneNumber, email, membership, joiningDate } =
+      req.body;
 
-    // Check if a member with the same phone number already exists
-    const member = await Member.findOne({ gym: req.gym._id, phoneNumber });
-    if (member) {
-      return res.status(409).json({
-        error: "A member has already been registered with this number",
-      });
+    // Check if a member with the same phone number or email already exists
+    const existingMember = await Member.findOne({
+      gym: req.gym._id,
+      $or: [{ phoneNumber }, { email }],
+    });
+
+    if (existingMember) {
+      if (existingMember.phoneNumber === phoneNumber) {
+        return res.status(409).json({
+          error: "A member has already been registered with this number",
+        });
+      }
+      if (existingMember.email === email) {
+        return res.status(409).json({
+          error: "A member has already been registered with this email",
+        });
+      }
     }
 
     // Check if the selected membership exists
@@ -51,8 +101,8 @@ exports.addMember = async (req, res) => {
     // Parse the joiningDate from the request body
     const parsedJoiningDate = new Date(joiningDate);
 
-    // Calculate the nextBillDate based on the manually set joiningDate
-    const membershipMonth = memberShip.months; // The number of months in the membership
+    // Calculate the nextBillDate
+    const membershipMonth = memberShip.months;
     const nextBillDate = addMonthsToDate(membershipMonth, parsedJoiningDate);
 
     // Create the new member
@@ -60,25 +110,27 @@ exports.addMember = async (req, res) => {
       name,
       address,
       phoneNumber,
+      email,
       membership,
       gym: req.gym._id,
-      joiningDate: parsedJoiningDate, // Use the manually set joiningDate
-      lastPayment: parsedJoiningDate, // Set lastPayment to the joiningDate
+      joiningDate: parsedJoiningDate,
+      lastPayment: parsedJoiningDate,
       nextBillDate,
     });
 
     // Save the new member to the database
     await newMember.save();
 
-    // Generate a unique QR code for the member
+    // Generate QR code
     const qrCodeData = JSON.stringify({
       memberId: newMember._id,
       name: newMember.name,
       phoneNumber: newMember.phoneNumber,
+      email: newMember.email,
       gymId: newMember.gym,
     });
 
-    const qrCode = qr.imageSync(qrCodeData, { type: "png" }); // Generate QR code as PNG buffer
+    const qrCode = qr.imageSync(qrCodeData, { type: "png" });
 
     // Upload the QR code to Cloudinary
     const cloudinaryUrl = await uploadToCloudinary(qrCode);
@@ -87,10 +139,18 @@ exports.addMember = async (req, res) => {
     newMember.qrCodeUrl = cloudinaryUrl;
     await newMember.save();
 
+    // Send email with QR code
+    const emailResult = await sendQRCodeEmail(email, name, cloudinaryUrl);
+    if (!emailResult.success) {
+      console.error("Failed to send email:", emailResult.error);
+      // Continue even if email fails
+    }
+
     res.status(200).json({
       message: "Member has been successfully added",
       newMember,
-      qrCodeUrl: cloudinaryUrl, // Send the Cloudinary URL in the response
+      qrCodeUrl: cloudinaryUrl,
+      emailSent: emailResult.success,
     });
   } catch (err) {
     res.status(500).json({
@@ -370,7 +430,7 @@ exports.updateMemberPlan = async (req, res) => {
 exports.editMember = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, phoneNumber, address, joiningDate } = req.body;
+    const { name, phoneNumber, email, address, joiningDate } = req.body;
 
     const member = await Member.findOne({ _id: id, gym: req.gym._id });
     if (!member) {
@@ -393,6 +453,7 @@ exports.editMember = async (req, res) => {
     // Update the member's details
     member.name = name || member.name;
     member.phoneNumber = phoneNumber || member.phoneNumber;
+    member.email = email || member.email;
     member.address = address || member.address;
 
     // Update the joiningDate if provided

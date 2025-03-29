@@ -8,7 +8,7 @@ import dayjs from "dayjs";
 
 const ColStyles = {
   padding: "10px",
-  borderLeft: "1px solid white",
+
   textAlign: "center",
 };
 

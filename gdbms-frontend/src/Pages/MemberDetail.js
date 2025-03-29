@@ -46,6 +46,7 @@ const MemberDetail = () => {
   const [isUnfreezeModalVisible, setIsUnfreezeModalVisible] = useState(false);
   const [isExpired, setIsExpired] = useState(false);
   const [canToggleStatus, setCanToggleStatus] = useState(true);
+  const [editedEmail, setEditedEmail] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
   const navigate = useNavigate();
@@ -242,13 +243,13 @@ const MemberDetail = () => {
   const showEditModal = () => {
     if (member) {
       setEditedName(member.name);
+      setEditedEmail(member.email); // Add this line
       setEditedPhone(member.phoneNumber);
       setEditedAddress(member.address);
       setEditedJoiningDate(dayjs(member.joiningDate));
     }
     setIsEditModalVisible(true);
   };
-
   const handleEditCancel = () => {
     setIsEditModalVisible(false);
   };
@@ -298,6 +299,7 @@ const MemberDetail = () => {
         `http://localhost:4000/members/editMember/${id}`,
         {
           name: editedName,
+          email: editedEmail, // Add this line
           phoneNumber: editedPhone,
           address: editedAddress,
           joiningDate: editedJoiningDate.toISOString(),
@@ -308,6 +310,7 @@ const MemberDetail = () => {
       setMember({
         ...member,
         name: editedName,
+        email: editedEmail, // Add this line
         phoneNumber: editedPhone,
         address: editedAddress,
         joiningDate: editedJoiningDate.toISOString(),
@@ -317,7 +320,9 @@ const MemberDetail = () => {
       setIsEditModalVisible(false);
     } catch (error) {
       console.error("Error updating member details:", error);
-      toast.error("Failed to update member details");
+      toast.error(
+        error.response?.data?.error || "Failed to update member details"
+      );
     }
   };
 
@@ -445,6 +450,7 @@ const MemberDetail = () => {
                 <p className="text-xl text-gray-700">
                   Phone: {member.phoneNumber}
                 </p>
+                <p className="text-xl text-gray-700">Email: {member.email}</p>
                 <p className="text-xl text-gray-700">
                   Membership Type: {member.membershipType}
                 </p>
@@ -654,6 +660,18 @@ const MemberDetail = () => {
             <Input
               value={editedName}
               onChange={(e) => setEditedName(e.target.value)}
+            />
+          </Form.Item>
+          <Form.Item
+            label="Email"
+            rules={[
+              { required: true, message: "Please enter the email" },
+              { type: "email", message: "Please enter a valid email" },
+            ]}
+          >
+            <Input
+              value={editedEmail}
+              onChange={(e) => setEditedEmail(e.target.value)}
             />
           </Form.Item>
           <Form.Item label="Address">

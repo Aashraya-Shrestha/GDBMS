@@ -4,13 +4,14 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import dayjs from "dayjs";
 import axios from "axios";
-import "../Styles/AddMemberForm.css"; // Import your CSS file
+import "../Styles/AddMemberForm.css";
 
 const { RangePicker } = DatePicker;
 
 const AddMemberForm = () => {
-  const [form] = Form.useForm(); // Form instance for validation
+  const [form] = Form.useForm();
   const [membershipOptions, setMembershipOptions] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false); // New loading state
 
   useEffect(() => {
     const fetchMemberships = async () => {
@@ -21,7 +22,7 @@ const AddMemberForm = () => {
         );
         const memberships = response.data.membership.map((m) => ({
           label: `${m.months} Month Membership - $${m.price}`,
-          value: m._id, // Use membership ID here
+          value: m._id,
         }));
         setMembershipOptions(memberships);
       } catch (error) {
@@ -35,18 +36,20 @@ const AddMemberForm = () => {
   }, []);
 
   const handleSubmit = async (values) => {
+    setIsSubmitting(true); // Start loading
     try {
-      const { name, phoneNumber, address, memberType, joiningDate } = values;
+      const { name, email, phoneNumber, address, memberType, joiningDate } =
+        values;
 
-      // Format the joiningDate to ISO string
       const formattedJoiningDate = joiningDate.toISOString();
 
       const memberData = {
         name,
+        email,
         phoneNumber,
         address,
         membership: memberType,
-        joiningDate: formattedJoiningDate, // Include joiningDate in the request
+        joiningDate: formattedJoiningDate,
       };
 
       const response = await axios.post(
@@ -55,22 +58,21 @@ const AddMemberForm = () => {
         { withCredentials: true }
       );
 
-      // Display success message
       toast.success(response.data.message);
-
-      // Reset form fields
       form.resetFields();
     } catch (error) {
       toast.error(
         error.response?.data?.message ||
-          "A member with this number already exists"
+          error.response?.data?.error ||
+          "Failed to add member"
       );
+    } finally {
+      setIsSubmitting(false); // End loading regardless of success/error
     }
   };
 
   return (
     <div className="flex items-center justify-center w-full min-h-screen bg-gray-100 p-6 relative overflow-hidden">
-      {/* Floating Shapes */}
       <div className="floating-shapes">
         <div className="shape shape-1"></div>
         <div className="shape shape-2"></div>
@@ -105,6 +107,24 @@ const AddMemberForm = () => {
           >
             <Input
               placeholder="Enter full name"
+              className="w-full py-2 px-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </Form.Item>
+
+          {/* Email Input */}
+          <Form.Item
+            label="Email"
+            name="email"
+            rules={[
+              { required: true, message: "Please enter the member's email" },
+              {
+                type: "email",
+                message: "Please enter a valid email address",
+              },
+            ]}
+          >
+            <Input
+              placeholder="Enter email address"
               className="w-full py-2 px-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </Form.Item>
@@ -147,10 +167,7 @@ const AddMemberForm = () => {
               { required: true, message: "Please select the joining date" },
             ]}
           >
-            <DatePicker
-              className="w-full"
-              format="YYYY-MM-DD" // Format the date display
-            />
+            <DatePicker className="w-full" format="YYYY-MM-DD" />
           </Form.Item>
 
           {/* Membership Type Select */}
@@ -166,7 +183,6 @@ const AddMemberForm = () => {
               options={membershipOptions}
               className="w-full"
               dropdownStyle={{ backgroundColor: "white" }}
-              style={{ width: "100%" }}
             />
           </Form.Item>
 
@@ -176,8 +192,10 @@ const AddMemberForm = () => {
               type="primary"
               htmlType="submit"
               className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200"
+              loading={isSubmitting} // Add loading state to button
+              disabled={isSubmitting} // Disable button when loading
             >
-              Add Member
+              {isSubmitting ? "Adding Member..." : "Add Member"}
             </Button>
           </Form.Item>
         </Form>

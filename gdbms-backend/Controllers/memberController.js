@@ -383,10 +383,9 @@ exports.changeStatus = async (req, res) => {
 
 exports.updateMemberPlan = async (req, res) => {
   try {
-    const { membership } = req.body; // Membership ID that is selected for renewal
-    const { id } = req.params; // Member ID
+    const { membership } = req.body;
+    const { id } = req.params;
 
-    // Find the membership data
     const membershipData = await Membership.findOne({
       gym: req.gym._id,
       _id: membership,
@@ -396,27 +395,39 @@ exports.updateMemberPlan = async (req, res) => {
       return res.status(404).json({ error: "No such membership found" });
     }
 
-    // Find the member
     const member = await Member.findOne({ gym: req.gym._id, _id: id });
     if (!member) {
       return res.status(404).json({ error: "No such member found" });
     }
 
-    // Calculate the new nextBillDate based on today's date or last payment date
     const renewalDate = new Date();
     const nextBillDate = addMonthsToDate(membershipData.months, renewalDate);
 
-    // Update the member's details
+    // Calculate days late (if renewal is after the original nextBillDate)
+    const daysLate =
+      member.nextBillDate < renewalDate
+        ? Math.ceil((renewalDate - member.nextBillDate) / (1000 * 60 * 60 * 24))
+        : 0;
+
+    // Add to renewal history
+    member.renewalHistory = member.renewalHistory || [];
+    member.renewalHistory.push({
+      date: renewalDate,
+      daysLate: daysLate,
+      membership: membership,
+    });
+
     member.membership = membership;
     member.nextBillDate = nextBillDate;
     member.lastPayment = renewalDate;
-    member.status = "Active"; // Ensure status is active after renewal
+    member.status = "Active";
 
     await member.save();
 
     res.status(200).json({
       message: "Member renewed successfully",
-      member, // Send back the updated member data
+      member,
+      daysLate: daysLate,
     });
   } catch (err) {
     console.log(err);
@@ -721,6 +732,176 @@ exports.bulkUpdateAttendance = async (req, res) => {
   }
 };
 
+exports.analyzeTopAttendeeRenewal = async (req, res) => {
+  try {
+    const threeMonthsAgo = new Date();
+    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+
+    const members = await Member.find({
+      gym: req.gym._id,
+      status: "Active",
+    }).populate("membership");
+
+    if (!members.length) {
+      return res.status(200).json({
+        message: "No active members found to analyze",
+        topAttendee: null,
+      });
+    }
+
+    const analyzedMembers = await Promise.all(
+      members.map(async (member) => {
+        const recentAttendance = member.attendance.filter((record) => {
+          const recordDate = new Date(record.date);
+          return recordDate >= threeMonthsAgo && record.status === "present";
+        });
+
+        const analysisStartDate =
+          member.joiningDate > threeMonthsAgo
+            ? member.joiningDate
+            : threeMonthsAgo;
+
+        const daysInAnalysisPeriod = Math.ceil(
+          (new Date() - analysisStartDate) / (1000 * 60 * 60 * 24)
+        );
+
+        const attendanceRate =
+          daysInAnalysisPeriod > 0
+            ? (recentAttendance.length / daysInAnalysisPeriod) * 100
+            : 0;
+
+        // Calculate renewal consistency based on renewal history
+        let renewalConsistency = "Consistent";
+        let totalDaysLate = 0;
+        let lateRenewals = 0;
+
+        if (member.renewalHistory && member.renewalHistory.length > 0) {
+          totalDaysLate = member.renewalHistory.reduce(
+            (sum, renewal) => sum + renewal.daysLate,
+            0
+          );
+
+          lateRenewals = member.renewalHistory.filter(
+            (renewal) => renewal.daysLate > 0
+          ).length;
+
+          const latePercentage =
+            (lateRenewals / member.renewalHistory.length) * 100;
+
+          if (latePercentage > 50) {
+            renewalConsistency = "Often Late";
+          } else if (latePercentage > 0) {
+            renewalConsistency = "Occasionally Late";
+          }
+        }
+
+        return {
+          memberId: member._id,
+          name: member.name,
+          email: member.email,
+          phoneNumber: member.phoneNumber,
+          attendanceCount: recentAttendance.length,
+          attendanceRate: parseFloat(attendanceRate.toFixed(2)),
+          membershipStatus: member.status,
+          membershipType: member.membership
+            ? `${member.membership.months} ${
+                member.membership.months === 1 ? "Month" : "Months"
+              }`
+            : "N/A",
+          nextBillDate: member.nextBillDate,
+          joiningDate: member.joiningDate,
+          daysSinceJoining: daysInAnalysisPeriod,
+          renewalConsistency,
+          renewalHistory: member.renewalHistory,
+          totalRenewals: member.renewalHistory?.length || 0,
+          lateRenewals,
+          totalDaysLate,
+          averageDaysLate: member.renewalHistory?.length
+            ? (totalDaysLate / member.renewalHistory.length).toFixed(1)
+            : 0,
+          lastRenewalDate: member.renewalHistory?.length
+            ? member.renewalHistory[member.renewalHistory.length - 1].date
+            : null,
+          daysLate: member.renewalHistory?.length
+            ? member.renewalHistory[member.renewalHistory.length - 1].daysLate
+            : 0,
+        };
+      })
+    );
+
+    const attendees = analyzedMembers.filter(
+      (member) => member.attendanceCount > 0
+    );
+
+    if (!attendees.length) {
+      return res.status(200).json({
+        message: "No members with attendance records found",
+        topAttendee: null,
+      });
+    }
+
+    // Enhanced sorting - prioritize attendance, then renewal consistency
+    attendees.sort((a, b) => {
+      // First by attendance rate
+      if (b.attendanceRate !== a.attendanceRate) {
+        return b.attendanceRate - a.attendanceRate;
+      }
+
+      // Then by renewal consistency (consistent first)
+      const consistencyOrder = {
+        Consistent: 1,
+        "Occasionally Late": 2,
+        "Often Late": 3,
+      };
+      if (
+        consistencyOrder[a.renewalConsistency] !==
+        consistencyOrder[b.renewalConsistency]
+      ) {
+        return (
+          consistencyOrder[a.renewalConsistency] -
+          consistencyOrder[b.renewalConsistency]
+        );
+      }
+
+      // Then by average days late (lower is better)
+      return a.averageDaysLate - b.averageDaysLate;
+    });
+
+    const topAttendee = attendees[0];
+
+    res.status(200).json({
+      message: "Analysis completed successfully",
+      topAttendee,
+      analysisPeriod: {
+        startDate: threeMonthsAgo,
+        endDate: new Date(),
+      },
+      totalMembersAnalyzed: members.length,
+      membersWithAttendance: attendees.length,
+    });
+  } catch (err) {
+    console.error("Error in member analysis:", err);
+    res.status(500).json({
+      error: "Server Error",
+      details: err.message,
+    });
+  }
+};
+
+// Helper function to calculate days late for last renewal
+function calculateDaysLate(member) {
+  if (!member.renewalHistory?.length) return 0;
+
+  const lastRenewal = member.renewalHistory[member.renewalHistory.length - 1];
+  const expectedDate = new Date(member.joiningDate);
+  expectedDate.setMonth(expectedDate.getMonth() + member.membership.months);
+
+  const daysLate = Math.ceil(
+    (new Date(lastRenewal.date) - expectedDate) / (1000 * 60 * 60 * 24)
+  );
+
+  return daysLate > 0 ? daysLate : 0;
+}
 exports.freezeAccount = async (req, res) => {
   try {
     const { id } = req.params;

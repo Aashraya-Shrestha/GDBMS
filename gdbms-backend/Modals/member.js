@@ -74,6 +74,7 @@ const memberSchema = mongoose.Schema(
       of: String, // "hasnt checked in", "present", "absent"
       default: {},
     },
+
     freeze: {
       isFrozen: { type: Boolean, default: false },
       freezeStartDate: { type: Date },
@@ -81,6 +82,13 @@ const memberSchema = mongoose.Schema(
       freezeReason: { type: String },
       originalNextBillDate: { type: Date },
     },
+    renewalHistory: [
+      {
+        date: { type: Date, required: true },
+        daysLate: { type: Number, default: 0 },
+        membership: { type: mongoose.Schema.Types.ObjectId, ref: "membership" },
+      },
+    ],
   },
   {
     timestamps: true,

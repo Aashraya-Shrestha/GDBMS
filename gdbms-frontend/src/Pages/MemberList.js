@@ -1,5 +1,16 @@
 import React, { useState, useEffect } from "react";
-import { Row, Col, Modal, Form, Input, Button, Switch, Tag } from "antd";
+import {
+  Row,
+  Col,
+  Modal,
+  Form,
+  Input,
+  Button,
+  Switch,
+  Tag,
+  Card,
+  Descriptions,
+} from "antd";
 import ListCard from "../Components/ListCard";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
@@ -9,6 +20,9 @@ import dayjs from "dayjs";
 const MemberList = () => {
   const [isAddMembershipModalVisible, setIsAddMembershipModalVisible] =
     useState(false);
+  const [isTopAttendeeModalVisible, setIsTopAttendeeModalVisible] =
+    useState(false);
+  const [topAttendee, setTopAttendee] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [membershipData, setMembershipData] = useState({
     months: "",
@@ -39,56 +53,9 @@ const MemberList = () => {
           "http://localhost:4000/members/all-members",
           { withCredentials: true }
         );
-        let filteredMembers = showActiveMembers
+        const filteredMembers = showActiveMembers
           ? response.data.members.filter((member) => member.status === "Active")
           : response.data.members;
-
-        // Check if any members need to be marked as absent
-        const now = new Date();
-        const cutoffHour = 20; // 8 PM cutoff time
-        const shouldMarkAbsent = now.getHours() >= cutoffHour;
-
-        if (shouldMarkAbsent) {
-          // Filter members who haven't checked in today
-          const membersToMarkAbsent = filteredMembers.filter((member) => {
-            const todayRecord = member.attendance?.find(
-              (record) => dayjs(record.date).format("YYYY-MM-DD") === today
-            );
-            return !todayRecord || todayRecord.status === "hasnt checked in";
-          });
-
-          // Mark them as absent in the database
-          if (membersToMarkAbsent.length > 0) {
-            await Promise.all(
-              membersToMarkAbsent.map(async (member) => {
-                try {
-                  await axios.post(
-                    `http://localhost:4000/members/mark-attendance/${member._id}`,
-                    { status: "absent", date: today },
-                    { withCredentials: true }
-                  );
-                } catch (error) {
-                  console.error(
-                    `Failed to mark ${member.name} as absent:`,
-                    error
-                  );
-                }
-              })
-            );
-
-            // Refetch members to get updated attendance records
-            const updatedResponse = await axios.get(
-              "http://localhost:4000/members/all-members",
-              { withCredentials: true }
-            );
-            filteredMembers = showActiveMembers
-              ? updatedResponse.data.members.filter(
-                  (member) => member.status === "Active"
-                )
-              : updatedResponse.data.members;
-          }
-        }
-
         setMembers(filteredMembers);
       } catch (error) {
         toast.error("Error fetching members");
@@ -96,6 +63,23 @@ const MemberList = () => {
     };
     fetchMembers();
   }, [showActiveMembers]);
+
+  const fetchTopAttendee = async () => {
+    try {
+      const response = await axios.get(
+        "http://localhost:4000/members/analyze-top-attendee-renewal",
+        { withCredentials: true }
+      );
+      if (response.data.topAttendee) {
+        setTopAttendee(response.data.topAttendee);
+        setIsTopAttendeeModalVisible(true);
+      } else {
+        toast.info("No top attendee found based on recent activity");
+      }
+    } catch (error) {
+      toast.error("Error fetching top attendee: " + error.message);
+    }
+  };
 
   const handleViewMember = (id) => {
     navigate(`/member/${id}`);
@@ -133,6 +117,16 @@ const MemberList = () => {
 
     // If no record exists, default to "hasnt checked in"
     if (!todayRecord) return "hasnt checked in";
+
+    // If record exists but status is "hasnt checked in" and it's past 6 PM, consider absent
+    const now = new Date();
+    const cutoffHour = 20; // 8 PM cutoff time
+    if (
+      todayRecord.status === "hasnt checked in" &&
+      now.getHours() >= cutoffHour
+    ) {
+      return "absent";
+    }
 
     return todayRecord.status;
   };
@@ -201,6 +195,13 @@ const MemberList = () => {
           style={{ backgroundColor: "#1e2837", borderColor: "#1e2837" }}
         >
           Add Membership
+        </Button>
+        <Button
+          type="primary"
+          onClick={fetchTopAttendee}
+          style={{ backgroundColor: "#4CAF50", borderColor: "#4CAF50" }}
+        >
+          Show Top Attendee
         </Button>
       </div>
 
@@ -272,6 +273,7 @@ const MemberList = () => {
         </div>
       )}
 
+      {/* Add Membership Modal */}
       <Modal
         title="Add Membership"
         open={isAddMembershipModalVisible}
@@ -305,6 +307,108 @@ const MemberList = () => {
           </Form.Item>
         </Form>
       </Modal>
+
+      {/* Top Attendee Modal */}
+      <Modal
+        title="Top Performing Member"
+        open={isTopAttendeeModalVisible}
+        onCancel={() => setIsTopAttendeeModalVisible(false)}
+        footer={[
+          <Button
+            key="close"
+            onClick={() => setIsTopAttendeeModalVisible(false)}
+          >
+            Close
+          </Button>,
+          topAttendee && (
+            <Button
+              key="view"
+              type="primary"
+              onClick={() => {
+                setIsTopAttendeeModalVisible(false);
+                handleViewMember(topAttendee.memberId);
+              }}
+            >
+              View Full Profile
+            </Button>
+          ),
+        ]}
+        width={800}
+      >
+        {topAttendee ? (
+          <Card>
+            <Descriptions title="Member Details" bordered column={2}>
+              <Descriptions.Item label="Name">
+                {topAttendee.name}
+              </Descriptions.Item>
+              <Descriptions.Item label="Phone">
+                {topAttendee.phoneNumber}
+              </Descriptions.Item>
+              <Descriptions.Item label="Email">
+                {topAttendee.email}
+              </Descriptions.Item>
+              <Descriptions.Item label="Membership Plan">
+                {topAttendee.membershipType}
+              </Descriptions.Item>
+              <Descriptions.Item label="Attendance Rate">
+                {topAttendee.attendanceRate}%
+              </Descriptions.Item>
+              <Descriptions.Item label="Attendance Count">
+                {topAttendee.attendanceCount} days
+              </Descriptions.Item>
+              <Descriptions.Item label="Renewal Consistency">
+                {topAttendee.renewalConsistency}
+              </Descriptions.Item>
+              <Descriptions.Item label="Last Renewal">
+                {topAttendee.lastRenewalDate
+                  ? dayjs(topAttendee.lastRenewalDate).format("MMMM D, YYYY")
+                  : "No renewal history"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Next Bill Date">
+                {topAttendee.nextBillDate
+                  ? dayjs(topAttendee.nextBillDate)
+                      .add(1, "day")
+                      .format("MMMM D, YYYY")
+                  : "N/A"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Status">
+                <Tag
+                  color={
+                    topAttendee.membershipStatus === "Active" ? "green" : "red"
+                  }
+                >
+                  {topAttendee.membershipStatus}
+                </Tag>
+              </Descriptions.Item>
+            </Descriptions>
+
+            <div style={{ marginTop: 20 }}>
+              <h4>Performance Analysis</h4>
+              <p>
+                This member has the highest attendance rate (
+                {topAttendee.attendanceRate}%) among all active members in the
+                last 3 months.
+              </p>
+              {topAttendee.renewalConsistency && (
+                <p>
+                  Their renewal behavior is{" "}
+                  {topAttendee.renewalConsistency.toLowerCase()}.
+                  {topAttendee.daysLate && topAttendee.daysLate > 0 && (
+                    <span>
+                      {" "}
+                      They were {topAttendee.daysLate} days late in their last
+                      renewal.
+                    </span>
+                  )}
+                </p>
+              )}
+            </div>
+          </Card>
+        ) : (
+          <p>No top attendee data available</p>
+        )}
+      </Modal>
+
       <ToastContainer />
     </div>
   );

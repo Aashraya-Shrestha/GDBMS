@@ -49,9 +49,34 @@ const MemberDetail = () => {
   const [editedEmail, setEditedEmail] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [canRenew, setCanRenew] = useState(false);
+  const [today] = useState(dayjs().format("YYYY-MM-DD"));
 
   const navigate = useNavigate();
   const { id } = useParams();
+
+  // Function to determine attendance status for a given date
+  const getAttendanceStatusForDate = (recordDate) => {
+    const dateStr = dayjs(recordDate).format("YYYY-MM-DD");
+    const record = attendanceData.find(
+      (r) => dayjs(r.date).format("YYYY-MM-DD") === dateStr
+    );
+
+    if (!record) return "hasnt checked in";
+
+    // If record exists but status is "hasnt checked in" and it's past 6 PM, consider absent
+    const now = new Date();
+    const cutoffHour = 18; // 6 PM cutoff time
+    if (
+      record.status === "hasnt checked in" &&
+      dateStr === today &&
+      now.getHours() >= cutoffHour
+    ) {
+      return "absent";
+    }
+
+    return record.status;
+  };
+
   useEffect(() => {
     const fetchMemberDetails = async () => {
       try {
@@ -68,26 +93,20 @@ const MemberDetail = () => {
         // Check if membership is expired
         const isCurrentlyExpired = nextBillDate < now;
         setIsExpired(isCurrentlyExpired);
-
-        // Set canRenew based on expiration status
         setCanRenew(isCurrentlyExpired);
 
-        // Check if membership has been expired for more than a month
+        // Automatically set to inactive if expired over a month
         const oneMonthAgo = new Date();
         oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
         const expiredOverMonth = nextBillDate < oneMonthAgo;
 
-        // If expired over a month and currently active, set to inactive
         if (expiredOverMonth && memberData.status === "Active") {
           try {
-            // Update status in backend
             await axios.put(
               `http://localhost:4000/members/changeStatus/${id}`,
               { status: "Inactive" },
               { withCredentials: true }
             );
-
-            // Update local state with inactive status
             setMember({ ...memberData, status: "Inactive" });
             setStatus(false);
             message.info(
@@ -95,19 +114,15 @@ const MemberDetail = () => {
             );
           } catch (updateError) {
             console.error("Error updating status:", updateError);
-            // If update fails, use the original data
             setMember(memberData);
             setStatus(memberData.status === "Active");
           }
         } else {
-          // Otherwise keep current status
           setMember(memberData);
           setStatus(memberData.status === "Active");
         }
 
         setEditedJoiningDate(dayjs(memberData.joiningDate));
-
-        // Always allow manual toggle regardless of expiration status
         setCanToggleStatus(true);
       } catch (error) {
         console.error("Error fetching member details:", error);
@@ -190,11 +205,7 @@ const MemberDetail = () => {
       setIsUnfreezeModalVisible(false);
     } catch (error) {
       console.error("Unfreeze error:", error);
-      if (error.response?.data?.error) {
-        toast.error(error.response.data.error);
-      } else {
-        toast.error("Failed to unfreeze account");
-      }
+      toast.error(error.response?.data?.error || "Failed to unfreeze account");
     }
   };
 
@@ -225,10 +236,9 @@ const MemberDetail = () => {
         { withCredentials: true }
       );
 
-      // After renewal, membership is automatically active
       const updatedMember = response.data.member;
       setMember(updatedMember);
-      setStatus(true); // Force status to active after renewal
+      setStatus(true);
       setIsRenewing(false);
 
       toast.success("Membership renewed and status set to Active");
@@ -243,13 +253,14 @@ const MemberDetail = () => {
   const showEditModal = () => {
     if (member) {
       setEditedName(member.name);
-      setEditedEmail(member.email); // Add this line
+      setEditedEmail(member.email);
       setEditedPhone(member.phoneNumber);
       setEditedAddress(member.address);
       setEditedJoiningDate(dayjs(member.joiningDate));
     }
     setIsEditModalVisible(true);
   };
+
   const handleEditCancel = () => {
     setIsEditModalVisible(false);
   };
@@ -259,12 +270,10 @@ const MemberDetail = () => {
   };
 
   const handleStatusChange = async (checked) => {
-    // If trying to set to inactive, check if allowed
     if (!checked) {
       const now = new Date();
       const nextBillDate = new Date(member.nextBillDate);
 
-      // Prevent setting to inactive if membership hasn't expired
       if (nextBillDate > now) {
         message.warning(
           "Cannot set to Inactive - membership hasn't expired yet"
@@ -299,7 +308,7 @@ const MemberDetail = () => {
         `http://localhost:4000/members/editMember/${id}`,
         {
           name: editedName,
-          email: editedEmail, // Add this line
+          email: editedEmail,
           phoneNumber: editedPhone,
           address: editedAddress,
           joiningDate: editedJoiningDate.toISOString(),
@@ -310,7 +319,7 @@ const MemberDetail = () => {
       setMember({
         ...member,
         name: editedName,
-        email: editedEmail, // Add this line
+        email: editedEmail,
         phoneNumber: editedPhone,
         address: editedAddress,
         joiningDate: editedJoiningDate.toISOString(),
@@ -326,56 +335,6 @@ const MemberDetail = () => {
     }
   };
 
-  const attendanceColumns = [
-    {
-      title: "Date",
-      dataIndex: "date",
-      key: "date",
-      render: (date) => dayjs(date).format("DD MMM YYYY"),
-      sorter: (a, b) => new Date(a.date) - new Date(b.date),
-    },
-    {
-      title: "Status",
-      dataIndex: "status",
-      key: "status",
-      render: (status) => {
-        let color = "orange";
-        if (status === "present") color = "green";
-        if (status === "absent") color = "red";
-        return <Tag color={color}>{status.toUpperCase()}</Tag>;
-      },
-      filters: [
-        { text: "Present", value: "present" },
-        { text: "Absent", value: "absent" },
-        { text: "Not Checked", value: "hasnt checked in" },
-      ],
-      onFilter: (value, record) => record.status === value,
-    },
-    {
-      title: "Actions",
-      key: "actions",
-      render: (_, record) => (
-        <Space size="middle">
-          <Button
-            size="small"
-            onClick={() => updateAttendance(record.date, "present")}
-            disabled={dayjs(record.date).isAfter(dayjs(), "day")}
-          >
-            Mark Present
-          </Button>
-          <Button
-            size="small"
-            danger
-            onClick={() => updateAttendance(record.date, "absent")}
-            disabled={dayjs(record.date).isAfter(dayjs(), "day")}
-          >
-            Mark Absent
-          </Button>
-        </Space>
-      ),
-    },
-  ];
-
   const updateAttendance = async (date, status) => {
     try {
       await axios.post(
@@ -389,6 +348,67 @@ const MemberDetail = () => {
       toast.error("Failed to update attendance");
     }
   };
+
+  const attendanceColumns = [
+    {
+      title: "Date",
+      dataIndex: "date",
+      key: "date",
+      render: (date) => dayjs(date).format("DD MMM YYYY"),
+      sorter: (a, b) => new Date(a.date) - new Date(b.date),
+    },
+    {
+      title: "Status",
+      dataIndex: "status",
+      key: "status",
+      render: (_, record) => {
+        const status = getAttendanceStatusForDate(record.date);
+        let color = "orange";
+        if (status === "present") color = "green";
+        if (status === "absent") color = "red";
+        return <Tag color={color}>{status.toUpperCase()}</Tag>;
+      },
+      filters: [
+        { text: "Present", value: "present" },
+        { text: "Absent", value: "absent" },
+        { text: "Not Checked", value: "hasnt checked in" },
+      ],
+      onFilter: (value, record) =>
+        getAttendanceStatusForDate(record.date) === value,
+    },
+    {
+      title: "Actions",
+      key: "actions",
+      render: (_, record) => {
+        const status = getAttendanceStatusForDate(record.date);
+        return (
+          <Space size="middle">
+            <Button
+              size="small"
+              onClick={() => updateAttendance(record.date, "present")}
+              disabled={
+                dayjs(record.date).isAfter(dayjs(), "day") ||
+                status === "present"
+              }
+            >
+              Mark Present
+            </Button>
+            <Button
+              size="small"
+              danger
+              onClick={() => updateAttendance(record.date, "absent")}
+              disabled={
+                dayjs(record.date).isAfter(dayjs(), "day") ||
+                status === "absent"
+              }
+            >
+              Mark Absent
+            </Button>
+          </Space>
+        );
+      },
+    },
+  ];
 
   const calculateAttendanceStats = () => {
     const filtered = attendanceData.filter(
@@ -410,8 +430,6 @@ const MemberDetail = () => {
     };
   };
 
-  const stats = calculateAttendanceStats();
-
   if (isLoading) {
     return <div className="w-5/6 mx-auto p-5">Loading member details...</div>;
   }
@@ -419,6 +437,8 @@ const MemberDetail = () => {
   if (!member) {
     return <div className="w-5/6 mx-auto p-5">Member not found</div>;
   }
+
+  const stats = calculateAttendanceStats();
 
   return (
     <div className="w-5/6 mx-auto p-5">
@@ -489,7 +509,7 @@ const MemberDetail = () => {
                   <Switch
                     checked={status}
                     onChange={handleStatusChange}
-                    disabled={member?.freeze?.isFrozen} // Only disable if frozen
+                    disabled={member?.freeze?.isFrozen}
                   />
                   <span className="text-xl">
                     {status ? "Active" : "Inactive"}
@@ -507,7 +527,7 @@ const MemberDetail = () => {
                     type="primary"
                     onClick={handleRenewClick}
                     className={status ? "bg-blue-600" : "bg-gray-400"}
-                    disabled={!canRenew || member?.freeze?.isFrozen} // Disabled if can't renew or frozen
+                    disabled={!canRenew || member?.freeze?.isFrozen}
                   >
                     Renew Membership
                   </Button>

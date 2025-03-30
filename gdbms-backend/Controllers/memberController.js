@@ -818,7 +818,7 @@ exports.unfreezeAccount = async (req, res) => {
 };
 
 cron.schedule(
-  "30 23 * * *",
+  "0 23 * * *", // Run at 11:00 PM every day
   async () => {
     try {
       const today = new Date();
@@ -843,8 +843,8 @@ cron.schedule(
           return recordDate >= today && recordDate < tomorrow;
         });
 
-        // If no record exists for today or record exists but status isn't 'present'
-        if (!todayAttendance || todayAttendance.status !== "present") {
+        // If no record exists for today or record exists but status is 'hasnt checked in'
+        if (!todayAttendance || todayAttendance.status === "hasnt checked in") {
           // If record doesn't exist, create new absent record
           if (!todayAttendance) {
             member.attendance.push({
@@ -852,8 +852,8 @@ cron.schedule(
               status: "absent",
             });
           }
-          // If record exists but isn't 'present', update to 'absent'
-          else if (todayAttendance.status !== "present") {
+          // If record exists and is 'hasnt checked in', update to 'absent'
+          else {
             todayAttendance.status = "absent";
           }
 
@@ -880,6 +880,6 @@ cron.schedule(
     }
   },
   {
-    timezone: "Asia/Kathmandu", // Replace with your server's timezone
+    timezone: "Asia/Kathmandu", // Adjust to your timezone
   }
 );

@@ -39,9 +39,56 @@ const MemberList = () => {
           "http://localhost:4000/members/all-members",
           { withCredentials: true }
         );
-        const filteredMembers = showActiveMembers
+        let filteredMembers = showActiveMembers
           ? response.data.members.filter((member) => member.status === "Active")
           : response.data.members;
+
+        // Check if any members need to be marked as absent
+        const now = new Date();
+        const cutoffHour = 20; // 8 PM cutoff time
+        const shouldMarkAbsent = now.getHours() >= cutoffHour;
+
+        if (shouldMarkAbsent) {
+          // Filter members who haven't checked in today
+          const membersToMarkAbsent = filteredMembers.filter((member) => {
+            const todayRecord = member.attendance?.find(
+              (record) => dayjs(record.date).format("YYYY-MM-DD") === today
+            );
+            return !todayRecord || todayRecord.status === "hasnt checked in";
+          });
+
+          // Mark them as absent in the database
+          if (membersToMarkAbsent.length > 0) {
+            await Promise.all(
+              membersToMarkAbsent.map(async (member) => {
+                try {
+                  await axios.post(
+                    `http://localhost:4000/members/mark-attendance/${member._id}`,
+                    { status: "absent", date: today },
+                    { withCredentials: true }
+                  );
+                } catch (error) {
+                  console.error(
+                    `Failed to mark ${member.name} as absent:`,
+                    error
+                  );
+                }
+              })
+            );
+
+            // Refetch members to get updated attendance records
+            const updatedResponse = await axios.get(
+              "http://localhost:4000/members/all-members",
+              { withCredentials: true }
+            );
+            filteredMembers = showActiveMembers
+              ? updatedResponse.data.members.filter(
+                  (member) => member.status === "Active"
+                )
+              : updatedResponse.data.members;
+          }
+        }
+
         setMembers(filteredMembers);
       } catch (error) {
         toast.error("Error fetching members");
@@ -79,13 +126,24 @@ const MemberList = () => {
     }
   };
 
+  const getAttendanceStatus = (member) => {
+    const todayRecord = member.attendance?.find(
+      (record) => dayjs(record.date).format("YYYY-MM-DD") === today
+    );
+
+    // If no record exists, default to "hasnt checked in"
+    if (!todayRecord) return "hasnt checked in";
+
+    return todayRecord.status;
+  };
+
   const toggleAttendance = async (id, currentStatus) => {
     try {
       const newStatus = currentStatus === "present" ? "absent" : "present";
 
       await axios.post(
         `http://localhost:4000/members/mark-attendance/${id}`,
-        { status: newStatus },
+        { status: newStatus, date: today },
         { withCredentials: true }
       );
 
@@ -178,9 +236,7 @@ const MemberList = () => {
       {/* Member Rows */}
       {filteredMembers.length > 0 ? (
         filteredMembers.map((item, index) => {
-          const todayAttendance = item.attendance?.find(
-            (record) => dayjs(record.date).format("YYYY-MM-DD") === today
-          ) || { status: "hasnt checked in" };
+          const todayAttendance = getAttendanceStatus(item);
 
           return (
             <ListCard
@@ -195,9 +251,9 @@ const MemberList = () => {
                   : "N/A"
               }
               memberDetail={() => handleViewMember(item._id)}
-              attendanceStatus={todayAttendance.status}
+              attendanceStatus={todayAttendance}
               onToggleAttendance={() =>
-                toggleAttendance(item._id, todayAttendance.status)
+                toggleAttendance(item._id, todayAttendance)
               }
               colWidths={columns.map((col) => col.width)}
             />

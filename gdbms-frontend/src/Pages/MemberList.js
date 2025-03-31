@@ -10,6 +10,7 @@ import {
   Tag,
   Card,
   Descriptions,
+  message,
 } from "antd";
 import ListCard from "../Components/ListCard";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -30,6 +31,7 @@ const MemberList = () => {
   });
   const [members, setMembers] = useState([]);
   const [today] = useState(dayjs().format("YYYY-MM-DD"));
+  const [isMarkingAbsent, setIsMarkingAbsent] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -128,6 +130,76 @@ const MemberList = () => {
     }
   };
 
+  const markYesterdayAbsent = async () => {
+    setIsMarkingAbsent(true);
+    try {
+      const yesterday = dayjs().subtract(1, "day").format("YYYY-MM-DD");
+
+      // Get all active members
+      const response = await axios.get(
+        "http://localhost:4000/members/all-members",
+        { withCredentials: true }
+      );
+
+      const activeMembers = response.data.members.filter(
+        (member) => member.status === "Active"
+      );
+
+      // Filter members who didn't check in yesterday
+      const membersToMarkAbsent = activeMembers.filter((member) => {
+        const yesterdayRecord = member.attendance?.find(
+          (record) => dayjs(record.date).format("YYYY-MM-DD") === yesterday
+        );
+        return (
+          !yesterdayRecord || yesterdayRecord.status === "hasnt checked in"
+        );
+      });
+
+      if (membersToMarkAbsent.length === 0) {
+        message.info(
+          "All active members have attendance records for yesterday"
+        );
+        return;
+      }
+
+      // Mark them as absent in the database
+      await Promise.all(
+        membersToMarkAbsent.map(async (member) => {
+          try {
+            await axios.post(
+              `http://localhost:4000/members/mark-attendance/${member._id}`,
+              { status: "absent", date: yesterday },
+              { withCredentials: true }
+            );
+          } catch (error) {
+            console.error(`Failed to mark ${member.name} as absent:`, error);
+          }
+        })
+      );
+
+      // Refetch members to get updated attendance records
+      const updatedResponse = await axios.get(
+        "http://localhost:4000/members/all-members",
+        { withCredentials: true }
+      );
+
+      const filteredMembers = showActiveMembers
+        ? updatedResponse.data.members.filter(
+            (member) => member.status === "Active"
+          )
+        : updatedResponse.data.members;
+
+      setMembers(filteredMembers);
+      toast.success(
+        `Successfully marked ${membersToMarkAbsent.length} members as absent for yesterday`
+      );
+    } catch (error) {
+      toast.error("Error marking yesterday's absentees: " + error.message);
+    } finally {
+      setIsMarkingAbsent(false);
+    }
+  };
+
   const handleViewMember = (id) => {
     navigate(`/member/${id}`);
   };
@@ -164,16 +236,6 @@ const MemberList = () => {
 
     // If no record exists, default to "hasnt checked in"
     if (!todayRecord) return "hasnt checked in";
-
-    // If record exists but status is "hasnt checked in" and it's past 6 PM, consider absent
-    const now = new Date();
-    const cutoffHour = 20; // 8 PM cutoff time
-    if (
-      todayRecord.status === "hasnt checked in" &&
-      now.getHours() >= cutoffHour
-    ) {
-      return "absent";
-    }
 
     return todayRecord.status;
   };
@@ -249,6 +311,14 @@ const MemberList = () => {
           style={{ backgroundColor: "#4CAF50", borderColor: "#4CAF50" }}
         >
           Show Top Attendee
+        </Button>
+        <Button
+          type="primary"
+          onClick={markYesterdayAbsent}
+          style={{ backgroundColor: "#f39c12", borderColor: "#f39c12" }}
+          loading={isMarkingAbsent}
+        >
+          Mark Yesterday's Absentees
         </Button>
       </div>
 

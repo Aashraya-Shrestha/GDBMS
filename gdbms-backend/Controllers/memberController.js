@@ -888,20 +888,6 @@ exports.analyzeTopAttendeeRenewal = async (req, res) => {
   }
 };
 
-// Helper function to calculate days late for last renewal
-function calculateDaysLate(member) {
-  if (!member.renewalHistory?.length) return 0;
-
-  const lastRenewal = member.renewalHistory[member.renewalHistory.length - 1];
-  const expectedDate = new Date(member.joiningDate);
-  expectedDate.setMonth(expectedDate.getMonth() + member.membership.months);
-
-  const daysLate = Math.ceil(
-    (new Date(lastRenewal.date) - expectedDate) / (1000 * 60 * 60 * 24)
-  );
-
-  return daysLate > 0 ? daysLate : 0;
-}
 exports.freezeAccount = async (req, res) => {
   try {
     const { id } = req.params;

@@ -42,6 +42,103 @@ const sendQRCodeEmail = async (email, name, qrCodeUrl) => {
   }
 };
 
+exports.scanQRCode = async (req, res) => {
+  try {
+    const { qrData } = req.body;
+
+    if (!qrData) {
+      return res.status(400).json({ error: "QR code data is required" });
+    }
+
+    // Parse the QR code data
+    let parsedData;
+    try {
+      parsedData = JSON.parse(qrData);
+    } catch (err) {
+      return res.status(400).json({ error: "Invalid QR code format" });
+    }
+
+    // Find member by ID or phone number
+    const member = await Member.findOne({
+      $or: [
+        { _id: parsedData.memberId },
+        { phoneNumber: parsedData.phoneNumber },
+      ],
+    }).populate("membership");
+
+    if (!member) {
+      return res.status(404).json({ error: "Member not found" });
+    }
+
+    // Check membership status
+    if (member.status !== "Active") {
+      return res.status(400).json({
+        error: "Membership is not active",
+        status: member.status,
+      });
+    }
+
+    // Check if account is frozen
+    if (member.freeze?.isFrozen) {
+      return res.status(400).json({
+        error: "Account is frozen",
+        freezeReason: member.freeze.freezeReason,
+      });
+    }
+
+    // Record check-in (mark attendance as present)
+    const checkInTime = new Date();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Check if attendance already exists for today
+    const existingAttendanceIndex = member.attendance.findIndex(
+      (record) => new Date(record.date).setHours(0, 0, 0, 0) === today.getTime()
+    );
+
+    if (existingAttendanceIndex >= 0) {
+      // Update existing record
+      member.attendance[existingAttendanceIndex].status = "present";
+      member.attendance[existingAttendanceIndex].checkInTime = checkInTime;
+    } else {
+      // Create new attendance record
+      member.attendance.push({
+        date: today,
+        status: "present",
+        checkInTime: checkInTime,
+      });
+    }
+
+    // Update current month attendance map
+    const dateKey = today.toISOString().split("T")[0];
+    if (!member.currentMonthAttendance) {
+      member.currentMonthAttendance = new Map();
+    }
+    member.currentMonthAttendance.set(dateKey, "present");
+
+    // Update last check-in time
+    member.lastCheckIn = checkInTime;
+
+    await member.save();
+
+    res.status(200).json({
+      message: "Check-in successful",
+      member: {
+        name: member.name,
+        phoneNumber: member.phoneNumber,
+        membershipType: member.membership?.name,
+        checkInTime,
+      },
+      attendanceMarked: true,
+    });
+  } catch (err) {
+    console.error("Error scanning QR code:", err);
+    res.status(500).json({
+      error: "Server Error",
+      details: err.message,
+    });
+  }
+};
 exports.getAllMember = async (req, res) => {
   try {
     const members = await Member.find({ gym: req.gym._id });
@@ -122,12 +219,14 @@ exports.addMember = async (req, res) => {
     await newMember.save();
 
     // Generate QR code
+
     const qrCodeData = JSON.stringify({
       memberId: newMember._id,
       name: newMember.name,
       phoneNumber: newMember.phoneNumber,
       email: newMember.email,
-      gymId: newMember.gym,
+      gymId: newMember.gym.toString(), // Ensure this is a string
+      timestamp: Date.now(), // Add timestamp for uniqueness
     });
 
     const qrCode = qr.imageSync(qrCodeData, { type: "png" });
@@ -353,6 +452,7 @@ exports.getMemberDetail = async (req, res) => {
     });
   }
 };
+
 exports.changeStatus = async (req, res) => {
   try {
     const { id } = req.params;

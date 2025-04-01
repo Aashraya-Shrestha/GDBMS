@@ -35,6 +35,7 @@ router.get(
   auth,
   memberController.analyzeTopAttendeeRenewal
 );
+router.post("/scan-qr", memberController.scanQRCode);
 
 router.post("/freeze-account/:id", auth, memberController.freezeAccount);
 router.post("/unfreeze-account/:id", auth, memberController.unfreezeAccount);

@@ -2,7 +2,6 @@ import "./App.css";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import LoginPage from "./Pages/LoginPage";
 import SignupPage from "./Pages/SignupPage";
-import Dashboard from "./Pages/Dashboard";
 import SideBar from "./Components/sidebar";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -11,12 +10,12 @@ import AddMemberForm from "./Pages/AddMembers";
 import GeneralUser from "./Pages/GeneralUser";
 import MemberDetail from "./Pages/MemberDetail";
 import "react-toastify/dist/ReactToastify.css";
-import StatsPage from "./Components/StatsPage";
 import ProfilePage from "./Pages/Profile";
 import { ToastContainer } from "react-toastify";
 import LandingPage from "./Pages/LandingPage";
 import TrainerList from "./Pages/TrainerList";
 import TrainerDetail from "./Pages/TrainerDetail";
+import MemberDashboard from "./Pages/Dashboard";
 
 function App() {
   const navigate = useNavigate();
@@ -43,14 +42,13 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
-          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/dashboard" element={<MemberDashboard />} />
           <Route path="/memberList" element={<MemberList />} />
           <Route path="/addMember" element={<AddMemberForm />} />
           <Route path="/trainerList" element={<TrainerList />} />
           <Route path="/specific/:page" element={<GeneralUser />} />
           <Route path="/member/:id" element={<MemberDetail />} />
           <Route path="/trainerDetail/:id" element={<TrainerDetail />} />
-          <Route path="/statsPage" element={<StatsPage />} />
           <Route path="/profile" element={<ProfilePage />} />
         </Routes>
       </div>

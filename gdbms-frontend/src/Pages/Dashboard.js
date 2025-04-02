@@ -235,9 +235,7 @@ const Dashboard = () => {
       {/* Header Section */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">
-            Membership Dashboard
-          </h1>
+          <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
           {lastUpdated && (
             <p className="text-xs text-gray-500">Last updated: {lastUpdated}</p>
           )}

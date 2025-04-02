@@ -1,11 +1,29 @@
 import React, { useState, useEffect } from "react";
-import { Row, Col, Modal, Form, Input, Button, DatePicker, Spin } from "antd";
+import {
+  Row,
+  Col,
+  Modal,
+  Form,
+  Input,
+  Button,
+  DatePicker,
+  Card,
+  Space,
+  Statistic,
+  message,
+  Divider,
+} from "antd";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import TrainerCard from "../Components/TrainerCard"; // Ensure this component exists
-import dayjs from "dayjs"; // For date handling
+import TrainerCard from "../Components/TrainerCard";
+import dayjs from "dayjs";
+import {
+  SearchOutlined,
+  UserAddOutlined,
+  SyncOutlined,
+} from "@ant-design/icons";
 
 const TrainerList = () => {
   const [isAddTrainerModalVisible, setIsAddTrainerModalVisible] =
@@ -16,29 +34,94 @@ const TrainerList = () => {
     name: "",
     contact: "",
     experience: "",
-    description: "", // Add description to the state
-    joiningDate: dayjs(), // Initialize with the current date
-    imageUrl: "", // Add imageUrl to the state
-    imageFile: null, // Add imageFile to the state
+    description: "",
+    joiningDate: dayjs(),
+    imageUrl: "",
+    imageFile: null,
   });
-  const [isLoading, setIsLoading] = useState(false); // Loading state
-  const [form] = Form.useForm(); // Form instance for validation
+  const [isLoading, setIsLoading] = useState(false);
+  const [form] = Form.useForm();
+  const [stats, setStats] = useState({
+    totalTrainers: 0,
+    avgExperience: 0,
+  });
   const navigate = useNavigate();
+
+  const theme = {
+    primary: "#1890ff",
+    secondary: "#f0f2f5",
+    text: "rgba(0, 0, 0, 0.85)",
+    cardBg: "#ffffff",
+    headerBg: "#f8f9fa",
+    border: "#e0e0e0",
+  };
+
+  const columns = [
+    { title: "No.", width: 150 },
+    { title: "Trainer Name", width: 300 },
+    { title: "Contact Info", width: 300 },
+    { title: "Experience", width: 250 },
+    { title: "Actions", width: 200 },
+  ];
 
   useEffect(() => {
     const fetchTrainers = async () => {
+      setIsLoading(true);
       try {
         const response = await axios.get(
           "http://localhost:4000/trainer/all-trainers",
           { withCredentials: true }
         );
+
+        const totalTrainers = response.data.trainers.length;
+        const avgExperience =
+          response.data.trainers.reduce((acc, curr) => {
+            return acc + (parseInt(curr.experience) || 0);
+          }, 0) / totalTrainers || 0;
+
+        setStats({
+          totalTrainers,
+          avgExperience: avgExperience.toFixed(1),
+        });
+
         setTrainers(response.data.trainers);
       } catch (error) {
         toast.error("Error fetching trainers");
+      } finally {
+        setIsLoading(false);
       }
     };
+
     fetchTrainers();
   }, []);
+
+  const refreshTrainers = () => {
+    setIsLoading(true);
+    axios
+      .get("http://localhost:4000/trainer/all-trainers", {
+        withCredentials: true,
+      })
+      .then((response) => {
+        const totalTrainers = response.data.trainers.length;
+        const avgExperience =
+          response.data.trainers.reduce((acc, curr) => {
+            return acc + (parseInt(curr.experience) || 0);
+          }, 0) / totalTrainers || 0;
+
+        setStats({
+          totalTrainers,
+          avgExperience: avgExperience.toFixed(1),
+        });
+
+        setTrainers(response.data.trainers);
+      })
+      .catch((error) => {
+        toast.error("Error refreshing trainers");
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  };
 
   const handleViewTrainer = (id) => {
     navigate(`/trainerDetail/${id}`);
@@ -46,7 +129,7 @@ const TrainerList = () => {
 
   const handleCancel = () => {
     setIsAddTrainerModalVisible(false);
-    form.resetFields(); // Reset form fields when modal is closed
+    form.resetFields();
   };
 
   const handleAddTrainer = () => {
@@ -72,27 +155,25 @@ const TrainerList = () => {
   };
 
   const handleTrainerSubmit = async () => {
-    setIsLoading(true); // Start loading
+    setIsLoading(true);
     try {
-      // Validate form fields
       await form.validateFields();
 
-      let imageUrl = trainerData.imageUrl; // Default to the existing image URL (if any)
+      let imageUrl = trainerData.imageUrl;
 
-      // If a new image file is uploaded, upload it to Cloudinary
       if (trainerData.imageFile) {
         imageUrl = await handleImageUpload(trainerData.imageFile);
         if (!imageUrl) {
           toast.error("Failed to upload image");
-          setIsLoading(false); // Stop loading on error
+          setIsLoading(false);
           return;
         }
       }
 
       const formattedData = {
         ...trainerData,
-        joiningDate: trainerData.joiningDate.toISOString(), // Include joiningDate
-        imageUrl: imageUrl, // Use the new or existing image URL
+        joiningDate: trainerData.joiningDate.toISOString(),
+        imageUrl: imageUrl,
       };
 
       const response = await axios.post(
@@ -106,25 +187,21 @@ const TrainerList = () => {
         name: "",
         contact: "",
         experience: "",
-        description: "", // Reset description
+        description: "",
         joiningDate: dayjs(),
         imageUrl: "",
-        imageFile: null, // Reset image file
+        imageFile: null,
       });
-      form.resetFields(); // Reset form fields after submission
+      form.resetFields();
 
-      const fetchResponse = await axios.get(
-        "http://localhost:4000/trainer/all-trainers",
-        { withCredentials: true }
-      );
-      setTrainers(fetchResponse.data.trainers);
+      refreshTrainers();
     } catch (error) {
       toast.error(
         "Error adding trainer: " +
           (error.response ? error.response.data.error : error.message)
       );
     } finally {
-      setIsLoading(false); // Stop loading
+      setIsLoading(false);
     }
   };
 
@@ -135,78 +212,214 @@ const TrainerList = () => {
   );
 
   return (
-    <div className="flex-1 flex-row px-4">
-      <h1 className="text-black text-3xl my-5 font-semibold">Trainer List</h1>
-      <div style={{ display: "flex", gap: "10px", marginBottom: "16px" }}>
-        <Input
-          placeholder="Search trainers..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          style={{ width: "60%" }}
-        />
-        <Button
-          type="primary"
-          onClick={handleAddTrainer}
-          style={{ backgroundColor: "#1e2837", borderColor: "#1e2837" }}
+    <div
+      className="flex-1 flex-col px-4 pb-4"
+      style={{ backgroundColor: theme.secondary }}
+    >
+      <div style={{ marginBottom: "24px" }}>
+        <h1
+          className="text-3xl my-4 font-semibold"
+          style={{ color: theme.text }}
         >
-          Add Trainer
-        </Button>
-      </div>
-      <Row
-        style={{
-          display: "flex",
-          width: "100%",
-          backgroundColor: "#1e2837",
-          color: "white",
-          fontWeight: "bold",
-          padding: "10px",
-        }}
-      >
-        {["Index", "Trainer Name", "Contact", "Experience", "Actions"].map(
-          (header, index) => (
-            <Col
-              key={index}
+          Trainer Management
+        </h1>
+
+        <Card
+          bordered={false}
+          style={{
+            marginBottom: "24px",
+            boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
+            borderRadius: 8,
+          }}
+        >
+          <Space size="large" style={{ marginBottom: "20px", width: "100%" }}>
+            <Statistic
+              title="Total Trainers"
+              value={stats.totalTrainers}
+              valueStyle={{
+                color: theme.primary,
+                fontSize: 24,
+                fontWeight: 500,
+              }}
+            />
+            <Divider type="vertical" style={{ height: 40 }} />
+            <Statistic
+              title="Avg Experience"
+              value={`${stats.avgExperience} yrs`}
+              valueStyle={{
+                color: "#faad14",
+                fontSize: 24,
+                fontWeight: 500,
+              }}
+            />
+          </Space>
+
+          <div
+            style={{
+              display: "flex",
+              gap: "16px",
+              flexWrap: "wrap",
+              alignItems: "center",
+            }}
+          >
+            <Input
+              placeholder="Search trainers..."
+              prefix={<SearchOutlined />}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               style={{
-                padding: 12,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flex: 1,
-                minWidth: 100,
+                width: "400px",
+                height: 40,
+                borderRadius: 6,
+              }}
+              allowClear
+            />
+
+            <Button
+              type="primary"
+              onClick={handleAddTrainer}
+              icon={<UserAddOutlined />}
+              style={{
+                backgroundColor: theme.primary,
+                borderColor: theme.primary,
+                height: 40,
+                borderRadius: 6,
+                fontWeight: 500,
               }}
             >
-              {header}
-            </Col>
-          )
-        )}
+              Add New Trainer
+            </Button>
+
+            <Button
+              icon={<SyncOutlined />}
+              onClick={refreshTrainers}
+              style={{
+                backgroundColor: theme.primary,
+                borderColor: theme.primary,
+                color: "#fff",
+                height: 40,
+                borderRadius: 6,
+                fontWeight: 500,
+              }}
+            >
+              Refresh Data
+            </Button>
+          </div>
+        </Card>
+      </div>
+
+      {/* Table Header */}
+      <Row
+        style={{
+          backgroundColor: theme.headerBg,
+          color: theme.text,
+          fontWeight: 600,
+          padding: "16px 0",
+          margin: 0,
+          width: "100%",
+          display: "flex",
+          borderRadius: "8px 8px 0 0",
+          border: `1px solid ${theme.border}`,
+          boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+        }}
+      >
+        {columns.map((col, index) => (
+          <Col
+            key={index}
+            style={{
+              padding: "0 24px",
+              textAlign: "center",
+              flex: `0 0 ${col.width}px`,
+              justifyContent: "center",
+              display: "flex",
+              alignItems: "center",
+              color: "#555",
+              fontSize: 15,
+            }}
+          >
+            {col.title}
+          </Col>
+        ))}
       </Row>
-      {filteredTrainers.length > 0 ? (
+
+      {/* Trainer Rows */}
+      {isLoading ? (
+        <div
+          style={{
+            padding: "60px",
+            textAlign: "center",
+            backgroundColor: theme.cardBg,
+            borderBottom: `1px solid ${theme.border}`,
+          }}
+        >
+          <SyncOutlined
+            spin
+            style={{ fontSize: 32, marginBottom: 20, color: theme.primary }}
+          />
+          <p style={{ fontSize: 16, color: "#666" }}>Loading trainer data...</p>
+        </div>
+      ) : filteredTrainers.length > 0 ? (
         filteredTrainers.map((item, index) => (
           <TrainerCard
             key={item._id}
             index={index + 1}
             name={item.name}
-            contact={item.contact || "N/A"}
-            experience={item.experience || "N/A"}
+            contact={item.contact}
+            experience={item.experience}
             trainerDetail={() => handleViewTrainer(item._id)}
+            colWidths={columns.map((col) => col.width)}
           />
         ))
       ) : (
-        <p>No trainers available</p>
+        <div
+          style={{
+            padding: "60px",
+            textAlign: "center",
+            backgroundColor: theme.cardBg,
+            borderBottom: `1px solid ${theme.border}`,
+          }}
+        >
+          <p style={{ fontSize: 16, color: "#666", marginBottom: 20 }}>
+            No trainers found matching your criteria
+          </p>
+          <Button
+            type="primary"
+            onClick={() => setSearchQuery("")}
+            style={{
+              marginTop: 16,
+              backgroundColor: theme.primary,
+              borderColor: theme.primary,
+              height: 40,
+              padding: "0 24px",
+              fontWeight: 500,
+            }}
+          >
+            Clear Search Filters
+          </Button>
+        </div>
       )}
+
+      {/* Add Trainer Modal */}
       <Modal
-        title="Add Trainer"
+        title="Add New Trainer"
         open={isAddTrainerModalVisible}
         onOk={handleTrainerSubmit}
         onCancel={handleCancel}
-        okText={isLoading ? "Adding..." : "Add Trainer"} // Show loading text
-        okButtonProps={{ disabled: isLoading }} // Disable button when loading
+        okText={isLoading ? "Adding..." : "Add Trainer"}
+        okButtonProps={{
+          disabled: isLoading,
+          style: {
+            backgroundColor: theme.primary,
+            borderColor: theme.primary,
+          },
+        }}
         cancelText="Cancel"
-        confirmLoading={isLoading} // Show spinner in the modal
+        confirmLoading={isLoading}
+        width={700}
       >
         <Form form={form} layout="vertical">
           <Form.Item
-            label="Name"
+            label="Full Name"
             name="name"
             rules={[
               { required: true, message: "Please enter the trainer's name" },
@@ -220,7 +433,7 @@ const TrainerList = () => {
             />
           </Form.Item>
           <Form.Item
-            label="Contact"
+            label="Contact Number"
             name="contact"
             rules={[
               { required: true, message: "Please enter the trainer's contact" },
@@ -238,7 +451,7 @@ const TrainerList = () => {
             />
           </Form.Item>
           <Form.Item
-            label="Experience"
+            label="Experience (years)"
             name="experience"
             rules={[
               {
@@ -262,7 +475,7 @@ const TrainerList = () => {
             />
           </Form.Item>
           <Form.Item
-            label="Description"
+            label="Professional Description"
             name="description"
             rules={[
               {
@@ -271,7 +484,8 @@ const TrainerList = () => {
               },
             ]}
           >
-            <Input
+            <Input.TextArea
+              rows={4}
               value={trainerData.description}
               onChange={(e) =>
                 setTrainerData((prev) => ({
@@ -300,9 +514,10 @@ const TrainerList = () => {
               style={{ width: "100%" }}
             />
           </Form.Item>
-          <Form.Item label="Image" name="image">
+          <Form.Item label="Profile Photo" name="image">
             <Input
               type="file"
+              accept="image/*"
               onChange={(e) =>
                 setTrainerData((prev) => ({
                   ...prev,

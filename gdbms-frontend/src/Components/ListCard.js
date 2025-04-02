@@ -1,5 +1,6 @@
-import { Button, Col, Row, Switch, Tag } from "antd";
+import { Button, Col, Row, Switch, Tag, Badge, Tooltip } from "antd";
 import PropTypes from "prop-types";
+import { ClockCircleOutlined, CheckCircleOutlined } from "@ant-design/icons";
 
 const ListCard = ({
   index = 0,
@@ -11,6 +12,7 @@ const ListCard = ({
   attendanceStatus = "hasnt checked in",
   onToggleAttendance = () => {},
   colWidths = [50, 150, 200, 150, 200, 150, 100],
+  isExpiringSoon = false,
 }) => {
   const getAttendanceTagColor = (status) => {
     switch (status) {
@@ -20,6 +22,17 @@ const ListCard = ({
         return "red";
       default:
         return "orange";
+    }
+  };
+
+  const getAttendanceIcon = (status) => {
+    switch (status) {
+      case "present":
+        return <CheckCircleOutlined style={{ color: "#52c41a" }} />;
+      case "absent":
+        return <ClockCircleOutlined style={{ color: "#f5222d" }} />;
+      default:
+        return <ClockCircleOutlined style={{ color: "#faad14" }} />;
     }
   };
 
@@ -34,9 +47,14 @@ const ListCard = ({
         display: "flex",
         width: "100%",
         padding: "12px 0",
-        borderBottom: "1px solid lightgray",
-        backgroundColor: "#EAF1F1",
+        borderBottom: "1px solid #f0f0f0",
+        backgroundColor: "#fff",
         margin: 0,
+        transition: "all 0.3s",
+        ":hover": {
+          boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+          transform: "translateY(-2px)",
+        },
       }}
     >
       <Col
@@ -57,6 +75,7 @@ const ListCard = ({
           justifyContent: "center",
           alignItems: "center",
           padding: "0 8px",
+          fontWeight: 500,
         }}
       >
         {name}
@@ -70,7 +89,19 @@ const ListCard = ({
           padding: "0 8px",
         }}
       >
-        {address}
+        <Tooltip title={address}>
+          <span
+            style={{
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              maxWidth: "100%",
+              display: "inline-block",
+            }}
+          >
+            {address}
+          </span>
+        </Tooltip>
       </Col>
       <Col
         style={{
@@ -93,12 +124,18 @@ const ListCard = ({
           padding: "0 8px",
         }}
       >
-        <Tag color={getAttendanceTagColor(attendanceStatus)}>
-          {attendanceStatus}
+        <Tag
+          icon={getAttendanceIcon(attendanceStatus)}
+          color={getAttendanceTagColor(attendanceStatus)}
+          style={{ display: "flex", alignItems: "center" }}
+        >
+          {attendanceStatus.replace(/\b\w/g, (l) => l.toUpperCase())}
         </Tag>
         <Switch
           checked={attendanceStatus === "present"}
           onChange={onToggleAttendance}
+          checkedChildren="Present"
+          unCheckedChildren="Absent"
         />
       </Col>
       <Col
@@ -110,7 +147,17 @@ const ListCard = ({
           padding: "0 8px",
         }}
       >
-        {expireDate}
+        <Tooltip title={isExpiringSoon ? "Membership expiring soon!" : ""}>
+          <span
+            style={{
+              color: isExpiringSoon ? "#f5222d" : "inherit",
+              fontWeight: isExpiringSoon ? 500 : "normal",
+            }}
+          >
+            {expireDate}
+            {isExpiringSoon && <Badge dot style={{ marginLeft: 8 }} />}
+          </span>
+        </Tooltip>
       </Col>
       <Col
         style={{
@@ -121,7 +168,9 @@ const ListCard = ({
           padding: "0 8px",
         }}
       >
-        <Button onClick={memberDetail}>View</Button>
+        <Button onClick={memberDetail} type="link" style={{ color: "#1890ff" }}>
+          View
+        </Button>
       </Col>
     </Row>
   );
@@ -137,10 +186,12 @@ ListCard.propTypes = {
   attendanceStatus: PropTypes.string,
   onToggleAttendance: PropTypes.func,
   colWidths: PropTypes.arrayOf(PropTypes.number),
+  isExpiringSoon: PropTypes.bool,
 };
 
 ListCard.defaultProps = {
   colWidths: [50, 150, 200, 150, 200, 150, 100],
+  isExpiringSoon: false,
 };
 
 export default ListCard;

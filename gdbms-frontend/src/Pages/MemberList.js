@@ -6,17 +6,30 @@ import {
   Form,
   Input,
   Button,
-  Switch,
   Tag,
   Card,
   Descriptions,
   message,
+  Space,
+  Select,
+  Badge,
+  Statistic,
 } from "antd";
 import ListCard from "../Components/ListCard";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import dayjs from "dayjs";
+import {
+  SearchOutlined,
+  UserAddOutlined,
+  TrophyOutlined,
+  HistoryOutlined,
+  FilterOutlined,
+  SyncOutlined,
+} from "@ant-design/icons";
+
+const { Option } = Select;
 
 const MemberList = () => {
   const [isAddMembershipModalVisible, setIsAddMembershipModalVisible] =
@@ -32,10 +45,24 @@ const MemberList = () => {
   const [members, setMembers] = useState([]);
   const [today] = useState(dayjs().format("YYYY-MM-DD"));
   const [isMarkingAbsent, setIsMarkingAbsent] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [stats, setStats] = useState({
+    totalMembers: 0,
+    activeMembers: 0,
+    attendanceRate: 0,
+  });
   const navigate = useNavigate();
-  const location = useLocation();
 
-  // Column configuration
+  const theme = {
+    primary: "#1890ff",
+    secondary: "#f0f2f5",
+    text: "rgba(0, 0, 0, 0.85)",
+    cardBg: "#ffffff",
+    headerBg: "#ffffff",
+    border: "#d9d9d9",
+  };
+
   const columns = [
     { title: "Index", width: 80 },
     { title: "Member's Name", width: 200 },
@@ -46,72 +73,110 @@ const MemberList = () => {
     { title: "Actions", width: 150 },
   ];
 
-  const showActiveMembers = location.state?.filter === "active";
-
   useEffect(() => {
     const fetchMembers = async () => {
+      setIsLoading(true);
       try {
         const response = await axios.get(
           "http://localhost:4000/members/all-members",
           { withCredentials: true }
         );
-        let filteredMembers = showActiveMembers
-          ? response.data.members.filter((member) => member.status === "Active")
-          : response.data.members;
 
-        // Check if any members need to be marked as absent
+        const totalMembers = response.data.members.length;
+        const activeMembers = response.data.members.filter(
+          (m) => m.status === "Active"
+        ).length;
+        const attendanceRate = calculateAttendanceRate(response.data.members);
+
+        setStats({
+          totalMembers,
+          activeMembers,
+          attendanceRate,
+        });
+
+        let filteredMembers = applyFilters(response.data.members);
+
         const now = new Date();
-        const cutoffHour = 20; // 8 PM cutoff time
+        const cutoffHour = 20;
         const shouldMarkAbsent = now.getHours() >= cutoffHour;
 
         if (shouldMarkAbsent) {
-          // Filter members who haven't checked in today
-          const membersToMarkAbsent = filteredMembers.filter((member) => {
-            const todayRecord = member.attendance?.find(
-              (record) => dayjs(record.date).format("YYYY-MM-DD") === today
-            );
-            return !todayRecord || todayRecord.status === "hasnt checked in";
-          });
-
-          // Mark them as absent in the database
-          if (membersToMarkAbsent.length > 0) {
-            await Promise.all(
-              membersToMarkAbsent.map(async (member) => {
-                try {
-                  await axios.post(
-                    `http://localhost:4000/members/mark-attendance/${member._id}`,
-                    { status: "absent", date: today },
-                    { withCredentials: true }
-                  );
-                } catch (error) {
-                  console.error(
-                    `Failed to mark ${member.name} as absent:`,
-                    error
-                  );
-                }
-              })
-            );
-
-            // Refetch members to get updated attendance records
-            const updatedResponse = await axios.get(
-              "http://localhost:4000/members/all-members",
-              { withCredentials: true }
-            );
-            filteredMembers = showActiveMembers
-              ? updatedResponse.data.members.filter(
-                  (member) => member.status === "Active"
-                )
-              : updatedResponse.data.members;
-          }
+          await markAbsentMembers(filteredMembers);
+          const updatedResponse = await axios.get(
+            "http://localhost:4000/members/all-members",
+            { withCredentials: true }
+          );
+          filteredMembers = applyFilters(updatedResponse.data.members);
         }
 
         setMembers(filteredMembers);
       } catch (error) {
         toast.error("Error fetching members");
+      } finally {
+        setIsLoading(false);
       }
     };
+
     fetchMembers();
-  }, [showActiveMembers]);
+  }, [filterStatus]);
+
+  const applyFilters = (members) => {
+    let filtered = [...members];
+
+    if (filterStatus === "active") {
+      filtered = filtered.filter((m) => m.status === "Active");
+    } else if (filterStatus === "inactive") {
+      filtered = filtered.filter((m) => m.status !== "Active");
+    }
+
+    return filtered;
+  };
+
+  const calculateAttendanceRate = (members) => {
+    if (members.length === 0) return 0;
+
+    const activeMembers = members.filter((m) => m.status === "Active");
+    if (activeMembers.length === 0) return 0;
+
+    const totalPossibleAttendance = activeMembers.length;
+    let totalPresent = 0;
+
+    activeMembers.forEach((member) => {
+      const todayRecord = member.attendance?.find(
+        (record) => dayjs(record.date).format("YYYY-MM-DD") === today
+      );
+      if (todayRecord?.status === "present") {
+        totalPresent++;
+      }
+    });
+
+    return Math.round((totalPresent / totalPossibleAttendance) * 100);
+  };
+
+  const markAbsentMembers = async (members) => {
+    const membersToMarkAbsent = members.filter((member) => {
+      const todayRecord = member.attendance?.find(
+        (record) => dayjs(record.date).format("YYYY-MM-DD") === today
+      );
+      return !todayRecord || todayRecord.status === "hasnt checked in";
+    });
+
+    if (membersToMarkAbsent.length > 0) {
+      await Promise.all(
+        membersToMarkAbsent.map(async (member) => {
+          try {
+            await axios.post(
+              `http://localhost:4000/members/mark-attendance/${member._id}`,
+              { status: "absent", date: today },
+              { withCredentials: true }
+            );
+          } catch (error) {
+            console.error(`Failed to mark ${member.name} as absent:`, error);
+          }
+        })
+      );
+    }
+  };
 
   const fetchTopAttendee = async () => {
     try {
@@ -134,8 +199,6 @@ const MemberList = () => {
     setIsMarkingAbsent(true);
     try {
       const yesterday = dayjs().subtract(1, "day").format("YYYY-MM-DD");
-
-      // Get all active members
       const response = await axios.get(
         "http://localhost:4000/members/all-members",
         { withCredentials: true }
@@ -145,7 +208,6 @@ const MemberList = () => {
         (member) => member.status === "Active"
       );
 
-      // Filter members who didn't check in yesterday
       const membersToMarkAbsent = activeMembers.filter((member) => {
         const yesterdayRecord = member.attendance?.find(
           (record) => dayjs(record.date).format("YYYY-MM-DD") === yesterday
@@ -162,7 +224,6 @@ const MemberList = () => {
         return;
       }
 
-      // Mark them as absent in the database
       await Promise.all(
         membersToMarkAbsent.map(async (member) => {
           try {
@@ -177,19 +238,12 @@ const MemberList = () => {
         })
       );
 
-      // Refetch members to get updated attendance records
       const updatedResponse = await axios.get(
         "http://localhost:4000/members/all-members",
         { withCredentials: true }
       );
 
-      const filteredMembers = showActiveMembers
-        ? updatedResponse.data.members.filter(
-            (member) => member.status === "Active"
-          )
-        : updatedResponse.data.members;
-
-      setMembers(filteredMembers);
+      setMembers(applyFilters(updatedResponse.data.members));
       toast.success(
         `Successfully marked ${membersToMarkAbsent.length} members as absent for yesterday`
       );
@@ -202,10 +256,6 @@ const MemberList = () => {
 
   const handleViewMember = (id) => {
     navigate(`/member/${id}`);
-  };
-
-  const handleCancel = () => {
-    setIsAddMembershipModalVisible(false);
   };
 
   const handleAddMember = () => {
@@ -233,11 +283,7 @@ const MemberList = () => {
     const todayRecord = member.attendance?.find(
       (record) => dayjs(record.date).format("YYYY-MM-DD") === today
     );
-
-    // If no record exists, default to "hasnt checked in"
-    if (!todayRecord) return "hasnt checked in";
-
-    return todayRecord.status;
+    return todayRecord?.status || "hasnt checked in";
   };
 
   const toggleAttendance = async (id, currentStatus) => {
@@ -253,11 +299,12 @@ const MemberList = () => {
       setMembers((prevMembers) =>
         prevMembers.map((member) => {
           if (member._id === id) {
-            const todayRecordIndex = member.attendance.findIndex(
-              (record) => dayjs(record.date).format("YYYY-MM-DD") === today
-            );
+            const todayRecordIndex =
+              member.attendance?.findIndex(
+                (record) => dayjs(record.date).format("YYYY-MM-DD") === today
+              ) ?? -1;
 
-            const updatedAttendance = [...member.attendance];
+            const updatedAttendance = [...(member.attendance || [])];
             if (todayRecordIndex >= 0) {
               updatedAttendance[todayRecordIndex].status = newStatus;
             } else {
@@ -289,49 +336,166 @@ const MemberList = () => {
   );
 
   return (
-    <div className="flex-1 flex-row px-4 pb-4">
-      <h1 className="text-black text-3xl my-5 font-semibold">Member List</h1>
-      <div style={{ display: "flex", gap: "10px", marginBottom: "16px" }}>
-        <Input
-          placeholder="Search members..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          style={{ width: "60%" }}
-        />
-        <Button
-          type="primary"
-          onClick={handleAddMember}
-          style={{ backgroundColor: "#1e2837", borderColor: "#1e2837" }}
+    <div
+      className="flex-1 flex-col px-4 pb-4"
+      style={{ backgroundColor: theme.secondary }}
+    >
+      <div style={{ marginBottom: "20px" }}>
+        <h1
+          className="text-3xl my-2 font-semibold"
+          style={{ color: theme.text }}
         >
-          Add Membership
-        </Button>
-        <Button
-          type="primary"
-          onClick={fetchTopAttendee}
-          style={{ backgroundColor: "#4CAF50", borderColor: "#4CAF50" }}
+          Member Dashboard
+        </h1>
+
+        <Card
+          bordered={false}
+          style={{
+            marginBottom: "20px",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+          }}
         >
-          Show Top Attendee
-        </Button>
-        <Button
-          type="primary"
-          onClick={markYesterdayAbsent}
-          style={{ backgroundColor: "#f39c12", borderColor: "#f39c12" }}
-          loading={isMarkingAbsent}
-        >
-          Mark Yesterday's Absentees
-        </Button>
+          <Space size="large" style={{ marginBottom: "16px" }}>
+            <Statistic
+              title="Total Members"
+              value={stats.totalMembers}
+              valueStyle={{ color: theme.primary }}
+            />
+            <Statistic
+              title="Active Members"
+              value={stats.activeMembers}
+              valueStyle={{ color: "#52c41a" }}
+            />
+            <Statistic
+              title="Today's Attendance"
+              value={`${stats.attendanceRate}%`}
+              valueStyle={{
+                color:
+                  stats.attendanceRate > 70
+                    ? "#52c41a"
+                    : stats.attendanceRate > 40
+                    ? "#faad14"
+                    : "#f5222d",
+              }}
+            />
+          </Space>
+
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+            <Input
+              placeholder="Search members..."
+              prefix={<SearchOutlined />}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{ width: "300px" }}
+              allowClear
+            />
+
+            <Select
+              placeholder="Filter by status"
+              style={{ width: 150 }}
+              value={filterStatus}
+              onChange={setFilterStatus}
+              suffixIcon={<FilterOutlined />}
+            >
+              <Option value="all">All Members</Option>
+              <Option value="active">Active Only</Option>
+              <Option value="inactive">Inactive Only</Option>
+            </Select>
+
+            <Button
+              type="primary"
+              onClick={handleAddMember}
+              icon={<UserAddOutlined />}
+              style={{
+                backgroundColor: theme.primary,
+                borderColor: theme.primary,
+              }}
+            >
+              Add Membership
+            </Button>
+
+            <Button
+              type="primary"
+              onClick={fetchTopAttendee}
+              icon={<TrophyOutlined />}
+              style={{
+                backgroundColor: theme.primary,
+                borderColor: theme.primary,
+              }}
+            >
+              Top Attendee
+            </Button>
+
+            <Button
+              type="primary"
+              onClick={markYesterdayAbsent}
+              icon={<HistoryOutlined />}
+              loading={isMarkingAbsent}
+              style={{
+                backgroundColor: theme.primary,
+                borderColor: theme.primary,
+              }}
+            >
+              Mark Absentees
+            </Button>
+
+            <Button
+              icon={<SyncOutlined />}
+              onClick={() => {
+                setIsLoading(true);
+                axios
+                  .get("http://localhost:4000/members/all-members", {
+                    withCredentials: true,
+                  })
+                  .then((response) => {
+                    const totalMembers = response.data.members.length;
+                    const activeMembers = response.data.members.filter(
+                      (m) => m.status === "Active"
+                    ).length;
+                    const attendanceRate = calculateAttendanceRate(
+                      response.data.members
+                    );
+
+                    setStats({
+                      totalMembers,
+                      activeMembers,
+                      attendanceRate,
+                    });
+
+                    setMembers(applyFilters(response.data.members));
+                  })
+                  .catch((error) => {
+                    toast.error("Error refreshing members");
+                  })
+                  .finally(() => {
+                    setIsLoading(false);
+                  });
+              }}
+              style={{
+                backgroundColor: theme.primary,
+                borderColor: theme.primary,
+                color: "#fff",
+              }}
+            >
+              Refresh
+            </Button>
+          </div>
+        </Card>
       </div>
 
       {/* Header Row */}
       <Row
         style={{
-          backgroundColor: "#1e2837",
-          color: "white",
+          backgroundColor: theme.headerBg,
+          color: theme.text,
           fontWeight: "bold",
           padding: "12px 0",
           margin: 0,
           width: "100%",
           display: "flex",
+          borderRadius: "8px 8px 0 0",
+          border: `1px solid ${theme.border}`,
+          boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
         }}
       >
         {columns.map((col, index) => (
@@ -344,6 +508,7 @@ const MemberList = () => {
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
+              color: theme.text,
             }}
           >
             {col.title}
@@ -352,9 +517,24 @@ const MemberList = () => {
       </Row>
 
       {/* Member Rows */}
-      {filteredMembers.length > 0 ? (
+      {isLoading ? (
+        <div
+          style={{
+            padding: "40px",
+            textAlign: "center",
+            backgroundColor: theme.cardBg,
+            borderBottom: `1px solid ${theme.border}`,
+          }}
+        >
+          <SyncOutlined spin style={{ fontSize: 24, marginBottom: 16 }} />
+          <p>Loading members...</p>
+        </div>
+      ) : filteredMembers.length > 0 ? (
         filteredMembers.map((item, index) => {
           const todayAttendance = getAttendanceStatus(item);
+          const isExpiringSoon =
+            item.nextBillDate &&
+            dayjs(item.nextBillDate).diff(dayjs(), "day") <= 7;
 
           return (
             <ListCard
@@ -365,7 +545,7 @@ const MemberList = () => {
               phoneNumber={item.phoneNumber}
               expireDate={
                 item.nextBillDate
-                  ? new Date(item.nextBillDate).toLocaleDateString("en-GB")
+                  ? dayjs(item.nextBillDate).format("DD/MM/YYYY")
                   : "N/A"
               }
               memberDetail={() => handleViewMember(item._id)}
@@ -374,34 +554,56 @@ const MemberList = () => {
                 toggleAttendance(item._id, todayAttendance)
               }
               colWidths={columns.map((col) => col.width)}
+              isExpiringSoon={isExpiringSoon}
             />
           );
         })
       ) : (
         <div
           style={{
-            padding: "20px",
+            padding: "40px",
             textAlign: "center",
-            backgroundColor: "#EAF1F1",
-            borderBottom: "1px solid lightgray",
+            backgroundColor: theme.cardBg,
+            borderBottom: `1px solid ${theme.border}`,
           }}
         >
-          No members available
+          <p>No members found matching your criteria</p>
+          <Button
+            type="primary"
+            onClick={() => {
+              setSearchQuery("");
+              setFilterStatus("all");
+            }}
+            style={{
+              marginTop: 16,
+              backgroundColor: theme.primary,
+              borderColor: theme.primary,
+            }}
+          >
+            Clear Filters
+          </Button>
         </div>
       )}
 
       {/* Add Membership Modal */}
       <Modal
-        title="Add Membership"
+        title="Add Membership Plan"
         open={isAddMembershipModalVisible}
         onOk={handleMembershipSubmit}
-        onCancel={handleCancel}
+        onCancel={() => setIsAddMembershipModalVisible(false)}
         okText="Add Membership"
         cancelText="Cancel"
+        okButtonProps={{
+          style: {
+            backgroundColor: theme.primary,
+            borderColor: theme.primary,
+          },
+        }}
       >
         <Form layout="vertical">
-          <Form.Item label="Month">
+          <Form.Item label="Duration (months)" required>
             <Input
+              type="number"
               value={membershipData.months}
               onChange={(e) =>
                 setMembershipData((prev) => ({
@@ -409,10 +611,12 @@ const MemberList = () => {
                   months: e.target.value,
                 }))
               }
+              placeholder="e.g. 1, 3, 6, 12"
             />
           </Form.Item>
-          <Form.Item label="Price">
+          <Form.Item label="Price ($)" required>
             <Input
+              type="number"
               value={membershipData.price}
               onChange={(e) =>
                 setMembershipData((prev) => ({
@@ -420,6 +624,8 @@ const MemberList = () => {
                   price: e.target.value,
                 }))
               }
+              prefix="$"
+              placeholder="e.g. 50, 120, 200"
             />
           </Form.Item>
         </Form>
@@ -445,6 +651,10 @@ const MemberList = () => {
                 setIsTopAttendeeModalVisible(false);
                 handleViewMember(topAttendee.memberId);
               }}
+              style={{
+                backgroundColor: theme.primary,
+                borderColor: theme.primary,
+              }}
             >
               View Full Profile
             </Button>
@@ -453,28 +663,56 @@ const MemberList = () => {
         width={800}
       >
         {topAttendee ? (
-          <Card>
+          <Card
+            bordered={false}
+            cover={
+              <div
+                style={{
+                  height: "100px",
+                  background: `linear-gradient(135deg, ${theme.primary} 0%, #40a9ff 100%)`,
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
+              >
+                <TrophyOutlined
+                  style={{ fontSize: "48px", color: "#ffd700" }}
+                />
+              </div>
+            }
+          >
             <Descriptions title="Member Details" bordered column={2}>
               <Descriptions.Item label="Name">
-                {topAttendee.name}
+                <strong>{topAttendee.name}</strong>
               </Descriptions.Item>
               <Descriptions.Item label="Phone">
                 {topAttendee.phoneNumber}
               </Descriptions.Item>
               <Descriptions.Item label="Email">
-                {topAttendee.email}
+                {topAttendee.email || "N/A"}
               </Descriptions.Item>
               <Descriptions.Item label="Membership Plan">
-                {topAttendee.membershipType}
+                <Tag color="blue">{topAttendee.membershipType}</Tag>
               </Descriptions.Item>
               <Descriptions.Item label="Attendance Rate">
                 {topAttendee.attendanceRate}%
               </Descriptions.Item>
               <Descriptions.Item label="Attendance Count">
-                {topAttendee.attendanceCount} days
+                <Badge
+                  count={topAttendee.attendanceCount}
+                  style={{ backgroundColor: theme.primary }}
+                />
               </Descriptions.Item>
               <Descriptions.Item label="Renewal Consistency">
-                {topAttendee.renewalConsistency}
+                <Tag
+                  color={
+                    topAttendee.renewalConsistency === "Consistent"
+                      ? "green"
+                      : "orange"
+                  }
+                >
+                  {topAttendee.renewalConsistency}
+                </Tag>
               </Descriptions.Item>
               <Descriptions.Item label="Last Renewal">
                 {topAttendee.lastRenewalDate
@@ -483,9 +721,7 @@ const MemberList = () => {
               </Descriptions.Item>
               <Descriptions.Item label="Next Bill Date">
                 {topAttendee.nextBillDate
-                  ? dayjs(topAttendee.nextBillDate)
-                      .add(1, "day")
-                      .format("MMMM D, YYYY")
+                  ? dayjs(topAttendee.nextBillDate).format("MMMM D, YYYY")
                   : "N/A"}
               </Descriptions.Item>
               <Descriptions.Item label="Status">
@@ -502,20 +738,26 @@ const MemberList = () => {
             <div style={{ marginTop: 20 }}>
               <h4>Performance Analysis</h4>
               <p>
-                This member has the highest attendance rate (
-                {topAttendee.attendanceRate}%) among all active members in the
-                last 3 months.
+                This member has demonstrated exceptional commitment with an
+                attendance rate of{" "}
+                <strong>{topAttendee.attendanceRate}%</strong> over the last 3
+                months, making them the most consistent attendee in our gym.
               </p>
               {topAttendee.renewalConsistency && (
                 <p>
                   Their renewal behavior is{" "}
-                  {topAttendee.renewalConsistency.toLowerCase()}.
-                  {topAttendee.daysLate && topAttendee.daysLate > 0 && (
+                  <strong>
+                    {topAttendee.renewalConsistency.toLowerCase()}
+                  </strong>
+                  .
+                  {topAttendee.daysLate && topAttendee.daysLate > 0 ? (
                     <span>
                       {" "}
-                      They were {topAttendee.daysLate} days late in their last
-                      renewal.
+                      They were typically {topAttendee.daysLate} days late with
+                      renewals.
                     </span>
+                  ) : (
+                    <span> They consistently renew on time.</span>
                   )}
                 </p>
               )}

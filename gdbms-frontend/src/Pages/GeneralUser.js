@@ -194,7 +194,7 @@ const GeneralUser = () => {
               display: "flex",
               gap: "10px",
               flexWrap: "wrap",
-              justifyContent: "center",
+              justifyContent: "left",
             }}
           >
             <Input

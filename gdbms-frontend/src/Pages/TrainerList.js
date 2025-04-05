@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from "react";
 import {
-  Row,
-  Col,
   Modal,
   Form,
   Input,
@@ -10,21 +8,15 @@ import {
   Card,
   Space,
   Statistic,
-  message,
   Divider,
   Grid,
-  Badge,
   Descriptions,
-  Tag,
-  Select,
-  Switch,
   Table,
 } from "antd";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import TrainerCard from "../Components/TrainerCard";
 import dayjs from "dayjs";
 import {
   SearchOutlined,
@@ -75,13 +67,13 @@ const TrainerList = () => {
       dataIndex: "index",
       key: "index",
       width: 100,
-      align: "left",
+      align: "center",
     },
     {
       title: "Trainer Name",
       dataIndex: "name",
       key: "name",
-      align: "left",
+      align: "center",
       width: 200,
     },
     {
@@ -89,7 +81,7 @@ const TrainerList = () => {
       dataIndex: "contact",
       key: "contact",
       width: 200,
-      align: "left",
+      align: "center",
       render: (text) => text || "Not provided",
     },
     {
@@ -97,14 +89,14 @@ const TrainerList = () => {
       dataIndex: "experience",
       key: "experience",
       width: 150,
-      align: "left",
+      align: "center",
       render: (text) => (text ? `${text} years` : "N/A"),
     },
     {
       title: "Actions",
       key: "actions",
       width: 150,
-      align: "left",
+      align: "center",
       render: (_, record) => (
         <Button
           type="primary"

@@ -851,11 +851,7 @@ exports.analyzeTopAttendeeRenewal = async (req, res) => {
 
     const analyzedMembers = await Promise.all(
       members.map(async (member) => {
-        const recentAttendance = member.attendance.filter((record) => {
-          const recordDate = new Date(record.date);
-          return recordDate >= threeMonthsAgo && record.status === "present";
-        });
-
+        // Calculate analysis period (either since joining or last 3 months)
         const analysisStartDate =
           member.joiningDate > threeMonthsAgo
             ? member.joiningDate
@@ -865,12 +861,20 @@ exports.analyzeTopAttendeeRenewal = async (req, res) => {
           (new Date() - analysisStartDate) / (1000 * 60 * 60 * 24)
         );
 
-        const attendanceRate =
-          daysInAnalysisPeriod > 0
-            ? (recentAttendance.length / daysInAnalysisPeriod) * 100
-            : 0;
+        // Get all attendance records within analysis period
+        const recentAttendance = member.attendance.filter((record) => {
+          const recordDate = new Date(record.date);
+          return recordDate >= analysisStartDate && record.status === "present";
+        });
 
-        // Calculate renewal consistency based on renewal history
+        // Calculate weighted attendance score
+        const attendanceScore = calculateWeightedAttendanceScore(
+          member.joiningDate,
+          recentAttendance.length,
+          daysInAnalysisPeriod
+        );
+
+        // Calculate renewal consistency (existing logic)
         let renewalConsistency = "Consistent";
         let totalDaysLate = 0;
         let lateRenewals = 0;
@@ -901,7 +905,10 @@ exports.analyzeTopAttendeeRenewal = async (req, res) => {
           email: member.email,
           phoneNumber: member.phoneNumber,
           attendanceCount: recentAttendance.length,
-          attendanceRate: parseFloat(attendanceRate.toFixed(2)),
+          attendanceRate: parseFloat(
+            ((recentAttendance.length / daysInAnalysisPeriod) * 100).toFixed(2)
+          ),
+          attendanceScore, // New weighted score
           membershipStatus: member.status,
           membershipType: member.membership
             ? `${member.membership.months} ${
@@ -910,7 +917,9 @@ exports.analyzeTopAttendeeRenewal = async (req, res) => {
             : "N/A",
           nextBillDate: member.nextBillDate,
           joiningDate: member.joiningDate,
-          daysSinceJoining: daysInAnalysisPeriod,
+          daysSinceJoining: Math.ceil(
+            (new Date() - member.joiningDate) / (1000 * 60 * 60 * 24)
+          ),
           renewalConsistency,
           renewalHistory: member.renewalHistory,
           totalRenewals: member.renewalHistory?.length || 0,
@@ -929,22 +938,28 @@ exports.analyzeTopAttendeeRenewal = async (req, res) => {
       })
     );
 
-    const attendees = analyzedMembers.filter(
-      (member) => member.attendanceCount > 0
+    // Filter out members who joined very recently (less than 7 days)
+    const eligibleMembers = analyzedMembers.filter(
+      (member) => member.daysSinceJoining >= 7
     );
 
-    if (!attendees.length) {
+    if (!eligibleMembers.length) {
       return res.status(200).json({
-        message: "No members with attendance records found",
+        message: "No members with sufficient tenure to analyze",
         topAttendee: null,
       });
     }
 
-    // Enhanced sorting - prioritize attendance, then renewal consistency
-    attendees.sort((a, b) => {
-      // First by attendance rate
-      if (b.attendanceRate !== a.attendanceRate) {
-        return b.attendanceRate - a.attendanceRate;
+    // Enhanced sorting - prioritize attendance score, then tenure, then renewal consistency
+    eligibleMembers.sort((a, b) => {
+      // First by attendance score (higher is better)
+      if (b.attendanceScore !== a.attendanceScore) {
+        return b.attendanceScore - a.attendanceScore;
+      }
+
+      // Then by tenure (longer is better)
+      if (b.daysSinceJoining !== a.daysSinceJoining) {
+        return b.daysSinceJoining - a.daysSinceJoining;
       }
 
       // Then by renewal consistency (consistent first)
@@ -953,21 +968,13 @@ exports.analyzeTopAttendeeRenewal = async (req, res) => {
         "Occasionally Late": 2,
         "Often Late": 3,
       };
-      if (
-        consistencyOrder[a.renewalConsistency] !==
+      return (
+        consistencyOrder[a.renewalConsistency] -
         consistencyOrder[b.renewalConsistency]
-      ) {
-        return (
-          consistencyOrder[a.renewalConsistency] -
-          consistencyOrder[b.renewalConsistency]
-        );
-      }
-
-      // Then by average days late (lower is better)
-      return a.averageDaysLate - b.averageDaysLate;
+      );
     });
 
-    const topAttendee = attendees[0];
+    const topAttendee = eligibleMembers[0];
 
     res.status(200).json({
       message: "Analysis completed successfully",
@@ -977,7 +984,7 @@ exports.analyzeTopAttendeeRenewal = async (req, res) => {
         endDate: new Date(),
       },
       totalMembersAnalyzed: members.length,
-      membersWithAttendance: attendees.length,
+      eligibleMembersCount: eligibleMembers.length,
     });
   } catch (err) {
     console.error("Error in member analysis:", err);
@@ -987,7 +994,6 @@ exports.analyzeTopAttendeeRenewal = async (req, res) => {
     });
   }
 };
-
 exports.freezeAccount = async (req, res) => {
   try {
     const { id } = req.params;
@@ -1150,3 +1156,24 @@ cron.schedule(
     timezone: "Asia/Kathmandu", // Adjust to your timezone
   }
 );
+
+function calculateWeightedAttendanceScore(
+  joiningDate,
+  attendanceCount,
+  daysInPeriod
+) {
+  const daysSinceJoining = Math.ceil(
+    (new Date() - joiningDate) / (1000 * 60 * 60 * 24)
+  );
+
+  // Base score is simple attendance rate
+  const baseScore = (attendanceCount / daysInPeriod) * 100;
+
+  // Apply tenure weight - members with longer tenure get a bonus
+  const tenureWeight = Math.min(1, daysSinceJoining / 30); // Cap at 1 for 30+ days
+
+  // Apply recency weight - more recent attendance counts more
+  const recencyWeight = daysInPeriod <= 30 ? 1 : 0.8; // Full weight for last 30 days
+
+  return baseScore * tenureWeight * recencyWeight;
+}

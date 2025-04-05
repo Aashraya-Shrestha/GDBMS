@@ -14,6 +14,7 @@ import {
   Statistic,
   Switch,
   Grid,
+  Progress,
 } from "antd";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -28,6 +29,7 @@ import {
   SyncOutlined,
   TableOutlined,
   AppstoreOutlined,
+  CalendarOutlined,
 } from "@ant-design/icons";
 
 const { Option } = Select;
@@ -553,12 +555,26 @@ const MemberList = () => {
         return (
           <Card
             key={member._id}
-            title={member.name}
+            title={
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <span>{member.name}</span>
+                <Tag color={member.status === "Active" ? "green" : "red"}>
+                  {member.status.toUpperCase()}
+                </Tag>
+              </div>
+            }
             extra={
               <Button
                 onClick={() => handleViewMember(member._id)}
                 type="link"
                 size="small"
+                style={{ padding: 0 }}
               >
                 View Details
               </Button>
@@ -566,33 +582,103 @@ const MemberList = () => {
             style={{
               borderRadius: "8px",
               boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+              position: "relative",
+              overflow: "hidden",
             }}
+            headStyle={{ borderBottom: "1px solid #f0f0f0" }}
           >
+            {isExpiringSoon && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  right: 0,
+                  backgroundColor: "#f5222d",
+                  color: "white",
+                  padding: "2px 8px",
+                  fontSize: "12px",
+                  borderBottomLeftRadius: "8px",
+                }}
+              >
+                Expiring Soon
+              </div>
+            )}
+
             <Descriptions column={1} size="small">
-              <Descriptions.Item label="Address">
-                {member.address}
-              </Descriptions.Item>
               <Descriptions.Item label="Phone">
                 {member.phoneNumber}
               </Descriptions.Item>
-              <Descriptions.Item label="Status">
-                <Tag color={todayAttendance === "present" ? "green" : "red"}>
-                  {todayAttendance.toUpperCase()}
-                </Tag>
-                <Switch
-                  checked={todayAttendance === "present"}
-                  onChange={() => toggleAttendance(member._id, todayAttendance)}
-                  size="small"
-                  style={{ marginLeft: 8 }}
-                />
+              <Descriptions.Item label="Email">
+                {member.email || "N/A"}
               </Descriptions.Item>
-              <Descriptions.Item label="Expiry Date">
-                <span style={{ color: isExpiringSoon ? "#f5222d" : "inherit" }}>
-                  {member.nextBillDate
-                    ? dayjs(member.nextBillDate).format("DD/MM/YYYY")
-                    : "N/A"}
-                  {isExpiringSoon && <Badge dot style={{ marginLeft: 8 }} />}
-                </span>
+
+              <Descriptions.Item label="Today's Status">
+                <div
+                  style={{ display: "flex", alignItems: "center", gap: "8px" }}
+                >
+                  <Tag color={todayAttendance === "present" ? "green" : "red"}>
+                    {todayAttendance.toUpperCase()}
+                  </Tag>
+                  <Switch
+                    checked={todayAttendance === "present"}
+                    onChange={() =>
+                      toggleAttendance(member._id, todayAttendance)
+                    }
+                    size="small"
+                  />
+                </div>
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Membership">
+                <div
+                  style={{ display: "flex", alignItems: "center", gap: "8px" }}
+                >
+                  <span>{member.membershipType}</span>
+                  <Tag color="#108ee9">
+                    {member.nextBillDate
+                      ? `Expires ${dayjs(member.nextBillDate).format(
+                          "DD/MM/YYYY"
+                        )}`
+                      : "No expiry"}
+                  </Tag>
+                </div>
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Attendance Score">
+                <div
+                  style={{ display: "flex", alignItems: "center", gap: "8px" }}
+                >
+                  <Progress
+                    percent={member.attendanceScore || 0}
+                    size="small"
+                    strokeColor={
+                      (member.attendanceScore || 0) > 80
+                        ? "#52c41a"
+                        : (member.attendanceScore || 0) > 50
+                        ? "#faad14"
+                        : "#f5222d"
+                    }
+                    format={(percent) => `${Math.round(percent)}%`}
+                    style={{ margin: 0, flex: 1 }}
+                  />
+                  <span style={{ fontSize: "12px", color: "#666" }}>
+                    {member.attendanceCount || 0}/
+                    {member.daysInAnalysisPeriod || 0} days
+                  </span>
+                </div>
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Tenure">
+                <div
+                  style={{ display: "flex", alignItems: "center", gap: "8px" }}
+                >
+                  <CalendarOutlined style={{ color: "#1890ff" }} />
+                  <span>
+                    {member.daysSinceJoining
+                      ? `${member.daysSinceJoining} days`
+                      : "New member"}
+                  </span>
+                </div>
               </Descriptions.Item>
             </Descriptions>
           </Card>

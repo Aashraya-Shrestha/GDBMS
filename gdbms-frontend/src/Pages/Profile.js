@@ -90,6 +90,10 @@ const ProfilePage = () => {
         setGym(response.data.gym); // Update the gym details in state
         toast.success("Gym details updated successfully"); // Success toast
         setIsEditing(false); // Exit edit mode
+
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
       }
     } catch (err) {
       // Handle errors

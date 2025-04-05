@@ -8,7 +8,8 @@ import {
 } from "@ant-design/icons";
 import { useLocation, useNavigate } from "react-router-dom";
 
-const SideBar = ({ className }) => {
+const SideBar = ({ className, gymName = "G. Fitness" }) => {
+  // Default to "G. Fitness" if no gymName provided
   const navigate = useNavigate();
   const location = useLocation();
   const currentPath = location.pathname;
@@ -30,12 +31,12 @@ const SideBar = ({ className }) => {
     <div
       className={`${className} bg-gray-900 text-white w-1/6 flex flex-col min-h-screen`}
     >
-      {/* Sidebar Header */}
+      {/* Sidebar Header - Now shows the gym name */}
       <div className="p-4 text-center mh-4 text-lg font-bold border-b border-gray-700">
-        G. Fitness
+        {gymName}
       </div>
 
-      {/* Sidebar Menu */}
+      {/* Rest of the sidebar remains the same */}
       <nav className="flex flex-col flex-grow">
         {items.map((item) => (
           <button
@@ -51,7 +52,6 @@ const SideBar = ({ className }) => {
         ))}
       </nav>
 
-      {/* Logout Button */}
       <button
         className="flex items-center gap-4 px-4 py-3 text-left hover:bg-red-700 transition-all bg-gray-700"
         onClick={handleLogout}

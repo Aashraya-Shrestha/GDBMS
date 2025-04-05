@@ -348,193 +348,156 @@ const MemberList = () => {
     )
   );
 
-  const renderTableHeader = () => (
+  // Define reusable styles
+  const cellStyle = {
+    display: "table-cell",
+    padding: "12px 16px",
+    verticalAlign: "middle",
+    textAlign: "center",
+    borderBottom: `1px solid ${theme.border}`,
+  };
+
+  const ellipsisStyle = {
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    display: "inline-block",
+    maxWidth: "100%",
+  };
+
+  const renderTableView = () => (
     <div
-      className="table-header"
       style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(7, auto)",
-        backgroundColor: theme.headerBg,
-        color: theme.text,
-        fontWeight: "bold",
-        padding: "12px 0",
-        borderRadius: "8px 8px 0 0",
-        border: `1px solid ${theme.border}`,
-        boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
         overflowX: "auto",
-        whiteSpace: "nowrap",
+        width: "100%",
+        border: `1px solid ${theme.border}`,
+        borderRadius: "8px",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+        backgroundColor: theme.cardBg,
       }}
     >
-      {columns.map((col, index) => (
-        <div
-          key={index}
-          style={{
-            padding: "0 8px",
-            textAlign: "center",
-            minWidth: col.width,
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            color: theme.text,
-          }}
-        >
-          {col.title}
-        </div>
-      ))}
-    </div>
-  );
-
-  const renderTableRow = (member, index) => {
-    const todayAttendance = getAttendanceStatus(member);
-    const isExpiringSoon =
-      member.nextBillDate &&
-      dayjs(member.nextBillDate).diff(dayjs(), "day") <= 7;
-
-    return (
       <div
-        key={member._id}
-        className="table-row"
         style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(7, auto)",
-          padding: "12px 0",
-          borderBottom: "1px solid #f0f0f0",
-          backgroundColor: "#fff",
-          transition: "all 0.3s",
-          ":hover": {
-            boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-            transform: "translateY(-2px)",
-          },
-          overflowX: "auto",
-          whiteSpace: "nowrap",
+          display: "table",
+          width: "100%",
+          minWidth: "800px", // Set a minimum width to ensure all columns are visible
         }}
       >
+        {/* Table Header */}
         <div
           style={{
-            minWidth: columns[0].width,
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            padding: "0 8px",
+            display: "table-row",
+            backgroundColor: theme.headerBg,
+            fontWeight: "bold",
           }}
         >
-          {index + 1}
+          {columns.map((col, index) => (
+            <div
+              key={`header-${index}`}
+              style={{
+                display: "table-cell",
+                padding: "12px 16px",
+                borderBottom: `1px solid ${theme.border}`,
+                minWidth: col.width,
+                textAlign: "center",
+              }}
+            >
+              {col.title}
+            </div>
+          ))}
         </div>
-        <div
-          style={{
-            minWidth: columns[1].width,
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            padding: "0 8px",
-            fontWeight: 500,
-          }}
-        >
-          {member.name}
-        </div>
-        <div
-          style={{
-            minWidth: columns[2].width,
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            padding: "0 8px",
-          }}
-        >
-          <span
-            className="text-ellipsis"
-            style={{
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              maxWidth: "100%",
-              display: "inline-block",
-            }}
-          >
-            {member.address}
-          </span>
-        </div>
-        <div
-          style={{
-            minWidth: columns[3].width,
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            padding: "0 8px",
-          }}
-        >
-          {member.phoneNumber}
-        </div>
-        <div
-          style={{
-            minWidth: columns[4].width,
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            gap: "8px",
-            padding: "0 8px",
-          }}
-        >
-          <Tag
-            color={
-              todayAttendance === "present"
-                ? "green"
-                : todayAttendance === "absent"
-                ? "red"
-                : "orange"
-            }
-            style={{ display: "flex", alignItems: "center" }}
-          >
-            {todayAttendance.replace(/\b\w/g, (l) => l.toUpperCase())}
-          </Tag>
-          <Switch
-            checked={todayAttendance === "present"}
-            onChange={() => toggleAttendance(member._id, todayAttendance)}
-            checkedChildren="Present"
-            unCheckedChildren="Absent"
-          />
-        </div>
-        <div
-          style={{
-            minWidth: columns[5].width,
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            padding: "0 8px",
-          }}
-        >
-          <span
-            style={{
-              color: isExpiringSoon ? "#f5222d" : "inherit",
-              fontWeight: isExpiringSoon ? 500 : "normal",
-            }}
-          >
-            {member.nextBillDate
-              ? dayjs(member.nextBillDate).format("DD/MM/YYYY")
-              : "N/A"}
-            {isExpiringSoon && <Badge dot style={{ marginLeft: 8 }} />}
-          </span>
-        </div>
-        <div
-          style={{
-            minWidth: columns[6].width,
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            padding: "0 8px",
-          }}
-        >
-          <Button
-            onClick={() => handleViewMember(member._id)}
-            type="link"
-            style={{ color: "#1890ff" }}
-          >
-            View
-          </Button>
-        </div>
+
+        {/* Table Rows */}
+        {filteredMembers.map((member, index) => {
+          const todayAttendance = getAttendanceStatus(member);
+          const isExpiringSoon =
+            member.nextBillDate &&
+            dayjs(member.nextBillDate).diff(dayjs(), "day") <= 7;
+
+          return (
+            <div
+              key={member._id}
+              style={{
+                display: "table-row",
+                ":hover": {
+                  backgroundColor: "#fafafa",
+                },
+              }}
+            >
+              {/* Index */}
+              <div style={cellStyle}>{index + 1}</div>
+
+              {/* Name */}
+              <div style={cellStyle}>{member.name}</div>
+
+              {/* Address */}
+              <div style={cellStyle}>
+                <span style={ellipsisStyle}>{member.address}</span>
+              </div>
+
+              {/* Phone */}
+              <div style={cellStyle}>{member.phoneNumber}</div>
+
+              {/* Attendance */}
+              <div style={cellStyle}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "8px",
+                  }}
+                >
+                  <Tag
+                    color={
+                      todayAttendance === "present"
+                        ? "green"
+                        : todayAttendance === "absent"
+                        ? "red"
+                        : "orange"
+                    }
+                  >
+                    {todayAttendance.replace(/\b\w/g, (l) => l.toUpperCase())}
+                  </Tag>
+                  <Switch
+                    checked={todayAttendance === "present"}
+                    onChange={() =>
+                      toggleAttendance(member._id, todayAttendance)
+                    }
+                    size="default"
+                  />
+                </div>
+              </div>
+
+              {/* Expiry */}
+              <div
+                style={{
+                  ...cellStyle,
+                  color: isExpiringSoon ? "#f5222d" : "inherit",
+                }}
+              >
+                {member.nextBillDate
+                  ? dayjs(member.nextBillDate).format("DD/MM/YYYY")
+                  : "N/A"}
+                {isExpiringSoon && <Badge dot style={{ marginLeft: 8 }} />}
+              </div>
+
+              {/* Actions */}
+              <div style={cellStyle}>
+                <Button
+                  onClick={() => handleViewMember(member._id)}
+                  type="link"
+                  style={{ color: theme.primary }}
+                >
+                  View
+                </Button>
+              </div>
+            </div>
+          );
+        })}
       </div>
-    );
-  };
+    </div>
+  );
 
   const renderCardView = () => (
     <div
@@ -875,12 +838,7 @@ const MemberList = () => {
         </div>
       ) : filteredMembers.length > 0 ? (
         viewMode === "table" ? (
-          <div className="table-container" style={{ overflowX: "auto" }}>
-            {renderTableHeader()}
-            {filteredMembers.map((member, index) =>
-              renderTableRow(member, index)
-            )}
-          </div>
+          renderTableView()
         ) : (
           renderCardView()
         )

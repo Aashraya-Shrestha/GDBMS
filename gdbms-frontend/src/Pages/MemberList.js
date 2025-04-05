@@ -14,6 +14,8 @@ import {
   Select,
   Badge,
   Statistic,
+  Switch,
+  Grid,
 } from "antd";
 import ListCard from "../Components/ListCard";
 import { useNavigate } from "react-router-dom";
@@ -27,9 +29,12 @@ import {
   HistoryOutlined,
   FilterOutlined,
   SyncOutlined,
+  TableOutlined,
+  AppstoreOutlined,
 } from "@ant-design/icons";
 
 const { Option } = Select;
+const { useBreakpoint } = Grid;
 
 const MemberList = () => {
   const [isAddMembershipModalVisible, setIsAddMembershipModalVisible] =
@@ -52,7 +57,9 @@ const MemberList = () => {
     activeMembers: 0,
     attendanceRate: 0,
   });
+  const [viewMode, setViewMode] = useState("table"); // 'table' or 'card'
   const navigate = useNavigate();
+  const screens = useBreakpoint();
 
   const theme = {
     primary: "#1890ff",
@@ -64,14 +71,21 @@ const MemberList = () => {
   };
 
   const columns = [
-    { title: "Index", width: 80 },
-    { title: "Member's Name", width: 200 },
-    { title: "Address", width: 200 },
-    { title: "Phone Number", width: 150 },
-    { title: "Today's Attendance", width: 250 },
-    { title: "Expiring Date", width: 150 },
-    { title: "Actions", width: 150 },
+    { title: "Index", width: 80, dataIndex: "index" },
+    { title: "Member's Name", width: 200, dataIndex: "name" },
+    { title: "Address", width: 200, dataIndex: "address" },
+    { title: "Phone Number", width: 150, dataIndex: "phoneNumber" },
+    { title: "Today's Attendance", width: 250, dataIndex: "attendance" },
+    { title: "Expiring Date", width: 150, dataIndex: "expireDate" },
+    { title: "Actions", width: 150, dataIndex: "actions" },
   ];
+
+  useEffect(() => {
+    // Automatically switch to card view on mobile
+    if (screens.xs && viewMode === "table") {
+      setViewMode("card");
+    }
+  }, [screens, viewMode]);
 
   useEffect(() => {
     const fetchMembers = async () => {
@@ -335,10 +349,265 @@ const MemberList = () => {
     )
   );
 
+  const renderTableHeader = () => (
+    <div
+      className="table-header"
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(7, auto)",
+        backgroundColor: theme.headerBg,
+        color: theme.text,
+        fontWeight: "bold",
+        padding: "12px 0",
+        borderRadius: "8px 8px 0 0",
+        border: `1px solid ${theme.border}`,
+        boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+        overflowX: "auto",
+        whiteSpace: "nowrap",
+      }}
+    >
+      {columns.map((col, index) => (
+        <div
+          key={index}
+          style={{
+            padding: "0 8px",
+            textAlign: "center",
+            minWidth: col.width,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            color: theme.text,
+          }}
+        >
+          {col.title}
+        </div>
+      ))}
+    </div>
+  );
+
+  const renderTableRow = (member, index) => {
+    const todayAttendance = getAttendanceStatus(member);
+    const isExpiringSoon =
+      member.nextBillDate &&
+      dayjs(member.nextBillDate).diff(dayjs(), "day") <= 7;
+
+    return (
+      <div
+        key={member._id}
+        className="table-row"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(7, auto)",
+          padding: "12px 0",
+          borderBottom: "1px solid #f0f0f0",
+          backgroundColor: "#fff",
+          transition: "all 0.3s",
+          ":hover": {
+            boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+            transform: "translateY(-2px)",
+          },
+          overflowX: "auto",
+          whiteSpace: "nowrap",
+        }}
+      >
+        <div
+          style={{
+            minWidth: columns[0].width,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            padding: "0 8px",
+          }}
+        >
+          {index + 1}
+        </div>
+        <div
+          style={{
+            minWidth: columns[1].width,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            padding: "0 8px",
+            fontWeight: 500,
+          }}
+        >
+          {member.name}
+        </div>
+        <div
+          style={{
+            minWidth: columns[2].width,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            padding: "0 8px",
+          }}
+        >
+          <span
+            className="text-ellipsis"
+            style={{
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              maxWidth: "100%",
+              display: "inline-block",
+            }}
+          >
+            {member.address}
+          </span>
+        </div>
+        <div
+          style={{
+            minWidth: columns[3].width,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            padding: "0 8px",
+          }}
+        >
+          {member.phoneNumber}
+        </div>
+        <div
+          style={{
+            minWidth: columns[4].width,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            gap: "8px",
+            padding: "0 8px",
+          }}
+        >
+          <Tag
+            color={
+              todayAttendance === "present"
+                ? "green"
+                : todayAttendance === "absent"
+                ? "red"
+                : "orange"
+            }
+            style={{ display: "flex", alignItems: "center" }}
+          >
+            {todayAttendance.replace(/\b\w/g, (l) => l.toUpperCase())}
+          </Tag>
+          <Switch
+            checked={todayAttendance === "present"}
+            onChange={() => toggleAttendance(member._id, todayAttendance)}
+            checkedChildren="Present"
+            unCheckedChildren="Absent"
+          />
+        </div>
+        <div
+          style={{
+            minWidth: columns[5].width,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            padding: "0 8px",
+          }}
+        >
+          <span
+            style={{
+              color: isExpiringSoon ? "#f5222d" : "inherit",
+              fontWeight: isExpiringSoon ? 500 : "normal",
+            }}
+          >
+            {member.nextBillDate
+              ? dayjs(member.nextBillDate).format("DD/MM/YYYY")
+              : "N/A"}
+            {isExpiringSoon && <Badge dot style={{ marginLeft: 8 }} />}
+          </span>
+        </div>
+        <div
+          style={{
+            minWidth: columns[6].width,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            padding: "0 8px",
+          }}
+        >
+          <Button
+            onClick={() => handleViewMember(member._id)}
+            type="link"
+            style={{ color: "#1890ff" }}
+          >
+            View
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
+  const renderCardView = () => (
+    <div
+      className="card-container"
+      style={{
+        display: "grid",
+        gridTemplateColumns: screens.md ? "repeat(2, 1fr)" : "1fr",
+        gap: "16px",
+        padding: "16px 0",
+      }}
+    >
+      {filteredMembers.map((member, index) => {
+        const todayAttendance = getAttendanceStatus(member);
+        const isExpiringSoon =
+          member.nextBillDate &&
+          dayjs(member.nextBillDate).diff(dayjs(), "day") <= 7;
+
+        return (
+          <Card
+            key={member._id}
+            title={member.name}
+            extra={
+              <Button
+                onClick={() => handleViewMember(member._id)}
+                type="link"
+                size="small"
+              >
+                View Details
+              </Button>
+            }
+            style={{
+              borderRadius: "8px",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+            }}
+          >
+            <Descriptions column={1} size="small">
+              <Descriptions.Item label="Address">
+                {member.address}
+              </Descriptions.Item>
+              <Descriptions.Item label="Phone">
+                {member.phoneNumber}
+              </Descriptions.Item>
+              <Descriptions.Item label="Status">
+                <Tag color={todayAttendance === "present" ? "green" : "red"}>
+                  {todayAttendance.toUpperCase()}
+                </Tag>
+                <Switch
+                  checked={todayAttendance === "present"}
+                  onChange={() => toggleAttendance(member._id, todayAttendance)}
+                  size="small"
+                  style={{ marginLeft: 8 }}
+                />
+              </Descriptions.Item>
+              <Descriptions.Item label="Expiry Date">
+                <span style={{ color: isExpiringSoon ? "#f5222d" : "inherit" }}>
+                  {member.nextBillDate
+                    ? dayjs(member.nextBillDate).format("DD/MM/YYYY")
+                    : "N/A"}
+                  {isExpiringSoon && <Badge dot style={{ marginLeft: 8 }} />}
+                </span>
+              </Descriptions.Item>
+            </Descriptions>
+          </Card>
+        );
+      })}
+    </div>
+  );
+
   return (
     <div
       className="flex-1 flex-col px-4 pb-4"
-      style={{ backgroundColor: theme.secondary }}
+      style={{ backgroundColor: theme.secondary, minHeight: "100vh" }}
     >
       <div style={{ marginBottom: "20px" }}>
         <h1
@@ -386,13 +655,13 @@ const MemberList = () => {
               prefix={<SearchOutlined />}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ width: "300px" }}
+              style={{ width: screens.xs ? "100%" : "300px" }}
               allowClear
             />
 
             <Select
               placeholder="Filter by status"
-              style={{ width: 150 }}
+              style={{ width: screens.xs ? "100%" : 150 }}
               value={filterStatus}
               onChange={setFilterStatus}
               suffixIcon={<FilterOutlined />}
@@ -401,6 +670,28 @@ const MemberList = () => {
               <Option value="active">Active Only</Option>
               <Option value="inactive">Inactive Only</Option>
             </Select>
+
+            {!screens.xs && (
+              <Button
+                icon={
+                  viewMode === "table" ? (
+                    <AppstoreOutlined />
+                  ) : (
+                    <TableOutlined />
+                  )
+                }
+                onClick={() =>
+                  setViewMode(viewMode === "table" ? "card" : "table")
+                }
+                style={{
+                  backgroundColor: theme.primary,
+                  borderColor: theme.primary,
+                  color: "#fff",
+                }}
+              >
+                {viewMode === "table" ? "Card View" : "Table View"}
+              </Button>
+            )}
 
             <Button
               type="primary"
@@ -411,33 +702,37 @@ const MemberList = () => {
                 borderColor: theme.primary,
               }}
             >
-              Add Membership
+              {screens.xs ? "Add" : "Add Membership"}
             </Button>
 
-            <Button
-              type="primary"
-              onClick={fetchTopAttendee}
-              icon={<TrophyOutlined />}
-              style={{
-                backgroundColor: theme.primary,
-                borderColor: theme.primary,
-              }}
-            >
-              Top Attendee
-            </Button>
+            {!screens.xs && (
+              <>
+                <Button
+                  type="primary"
+                  onClick={fetchTopAttendee}
+                  icon={<TrophyOutlined />}
+                  style={{
+                    backgroundColor: theme.primary,
+                    borderColor: theme.primary,
+                  }}
+                >
+                  Top Attendee
+                </Button>
 
-            <Button
-              type="primary"
-              onClick={markYesterdayAbsent}
-              icon={<HistoryOutlined />}
-              loading={isMarkingAbsent}
-              style={{
-                backgroundColor: theme.primary,
-                borderColor: theme.primary,
-              }}
-            >
-              Mark Absentees
-            </Button>
+                <Button
+                  type="primary"
+                  onClick={markYesterdayAbsent}
+                  icon={<HistoryOutlined />}
+                  loading={isMarkingAbsent}
+                  style={{
+                    backgroundColor: theme.primary,
+                    borderColor: theme.primary,
+                  }}
+                >
+                  Mark Absentees
+                </Button>
+              </>
+            )}
 
             <Button
               icon={<SyncOutlined />}
@@ -477,46 +772,12 @@ const MemberList = () => {
                 color: "#fff",
               }}
             >
-              Refresh
+              {screens.xs ? "Refresh" : "Refresh"}
             </Button>
           </div>
         </Card>
       </div>
 
-      {/* Header Row */}
-      <Row
-        style={{
-          backgroundColor: theme.headerBg,
-          color: theme.text,
-          fontWeight: "bold",
-          padding: "12px 0",
-          margin: 0,
-          width: "100%",
-          display: "flex",
-          borderRadius: "8px 8px 0 0",
-          border: `1px solid ${theme.border}`,
-          boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-        }}
-      >
-        {columns.map((col, index) => (
-          <Col
-            key={index}
-            style={{
-              padding: "0 8px",
-              textAlign: "center",
-              flex: `0 0 ${col.width}px`,
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              color: theme.text,
-            }}
-          >
-            {col.title}
-          </Col>
-        ))}
-      </Row>
-
-      {/* Member Rows */}
       {isLoading ? (
         <div
           style={{
@@ -530,34 +791,16 @@ const MemberList = () => {
           <p>Loading members...</p>
         </div>
       ) : filteredMembers.length > 0 ? (
-        filteredMembers.map((item, index) => {
-          const todayAttendance = getAttendanceStatus(item);
-          const isExpiringSoon =
-            item.nextBillDate &&
-            dayjs(item.nextBillDate).diff(dayjs(), "day") <= 7;
-
-          return (
-            <ListCard
-              key={item._id}
-              index={index + 1}
-              name={item.name}
-              address={item.address}
-              phoneNumber={item.phoneNumber}
-              expireDate={
-                item.nextBillDate
-                  ? dayjs(item.nextBillDate).format("DD/MM/YYYY")
-                  : "N/A"
-              }
-              memberDetail={() => handleViewMember(item._id)}
-              attendanceStatus={todayAttendance}
-              onToggleAttendance={() =>
-                toggleAttendance(item._id, todayAttendance)
-              }
-              colWidths={columns.map((col) => col.width)}
-              isExpiringSoon={isExpiringSoon}
-            />
-          );
-        })
+        viewMode === "table" ? (
+          <div className="table-container" style={{ overflowX: "auto" }}>
+            {renderTableHeader()}
+            {filteredMembers.map((member, index) =>
+              renderTableRow(member, index)
+            )}
+          </div>
+        ) : (
+          renderCardView()
+        )
       ) : (
         <div
           style={{

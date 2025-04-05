@@ -1,6 +1,9 @@
-import { Button, Col, Row, Switch, Tag, Badge, Tooltip } from "antd";
+import { Button, Tag, Badge, Tooltip, Card, Descriptions, Switch } from "antd";
 import PropTypes from "prop-types";
 import { ClockCircleOutlined, CheckCircleOutlined } from "@ant-design/icons";
+import { Grid } from "antd";
+
+const { useBreakpoint } = Grid;
 
 const ListCard = ({
   index = 0,
@@ -11,9 +14,10 @@ const ListCard = ({
   memberDetail = () => {},
   attendanceStatus = "hasnt checked in",
   onToggleAttendance = () => {},
-  colWidths = [50, 150, 200, 150, 200, 150, 100],
   isExpiringSoon = false,
 }) => {
+  const screens = useBreakpoint();
+
   const getAttendanceTagColor = (status) => {
     switch (status) {
       case "present":
@@ -36,20 +40,66 @@ const ListCard = ({
     }
   };
 
-  const safeColWidths =
-    Array.isArray(colWidths) && colWidths.length === 7
-      ? colWidths
-      : [50, 150, 200, 150, 200, 150, 100];
+  if (screens.xs || screens.sm) {
+    return (
+      <Card
+        title={name}
+        extra={
+          <Button onClick={memberDetail} type="link" size="small">
+            View
+          </Button>
+        }
+        style={{
+          marginBottom: 16,
+          borderRadius: "8px",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+        }}
+      >
+        <Descriptions column={1} size="small">
+          <Descriptions.Item label="Address">{address}</Descriptions.Item>
+          <Descriptions.Item label="Phone">{phoneNumber}</Descriptions.Item>
+          <Descriptions.Item label="Status">
+            <Tag
+              icon={getAttendanceIcon(attendanceStatus)}
+              color={getAttendanceTagColor(attendanceStatus)}
+              style={{ display: "flex", alignItems: "center" }}
+            >
+              {attendanceStatus.replace(/\b\w/g, (l) => l.toUpperCase())}
+            </Tag>
+            <Switch
+              checked={attendanceStatus === "present"}
+              onChange={onToggleAttendance}
+              size="small"
+              style={{ marginLeft: 8 }}
+            />
+          </Descriptions.Item>
+          <Descriptions.Item label="Expiry Date">
+            <Tooltip title={isExpiringSoon ? "Membership expiring soon!" : ""}>
+              <span
+                style={{
+                  color: isExpiringSoon ? "#f5222d" : "inherit",
+                  fontWeight: isExpiringSoon ? 500 : "normal",
+                }}
+              >
+                {expireDate}
+                {isExpiringSoon && <Badge dot style={{ marginLeft: 8 }} />}
+              </span>
+            </Tooltip>
+          </Descriptions.Item>
+        </Descriptions>
+      </Card>
+    );
+  }
 
   return (
-    <Row
+    <div
+      className="table-row"
       style={{
-        display: "flex",
-        width: "100%",
+        display: "grid",
+        gridTemplateColumns: "repeat(7, auto)",
         padding: "12px 0",
         borderBottom: "1px solid #f0f0f0",
         backgroundColor: "#fff",
-        margin: 0,
         transition: "all 0.3s",
         ":hover": {
           boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
@@ -57,9 +107,9 @@ const ListCard = ({
         },
       }}
     >
-      <Col
+      <div
         style={{
-          flex: `0 0 ${safeColWidths[0]}px`,
+          minWidth: 80,
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
@@ -67,10 +117,10 @@ const ListCard = ({
         }}
       >
         {index}
-      </Col>
-      <Col
+      </div>
+      <div
         style={{
-          flex: `0 0 ${safeColWidths[1]}px`,
+          minWidth: 200,
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
@@ -79,10 +129,10 @@ const ListCard = ({
         }}
       >
         {name}
-      </Col>
-      <Col
+      </div>
+      <div
         style={{
-          flex: `0 0 ${safeColWidths[2]}px`,
+          minWidth: 200,
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
@@ -102,10 +152,10 @@ const ListCard = ({
             {address}
           </span>
         </Tooltip>
-      </Col>
-      <Col
+      </div>
+      <div
         style={{
-          flex: `0 0 ${safeColWidths[3]}px`,
+          minWidth: 150,
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
@@ -113,10 +163,10 @@ const ListCard = ({
         }}
       >
         {phoneNumber}
-      </Col>
-      <Col
+      </div>
+      <div
         style={{
-          flex: `0 0 ${safeColWidths[4]}px`,
+          minWidth: 250,
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
@@ -137,10 +187,10 @@ const ListCard = ({
           checkedChildren="Present"
           unCheckedChildren="Absent"
         />
-      </Col>
-      <Col
+      </div>
+      <div
         style={{
-          flex: `0 0 ${safeColWidths[5]}px`,
+          minWidth: 150,
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
@@ -158,10 +208,10 @@ const ListCard = ({
             {isExpiringSoon && <Badge dot style={{ marginLeft: 8 }} />}
           </span>
         </Tooltip>
-      </Col>
-      <Col
+      </div>
+      <div
         style={{
-          flex: `0 0 ${safeColWidths[6]}px`,
+          minWidth: 150,
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
@@ -171,8 +221,8 @@ const ListCard = ({
         <Button onClick={memberDetail} type="link" style={{ color: "#1890ff" }}>
           View
         </Button>
-      </Col>
-    </Row>
+      </div>
+    </div>
   );
 };
 
@@ -185,12 +235,10 @@ ListCard.propTypes = {
   memberDetail: PropTypes.func,
   attendanceStatus: PropTypes.string,
   onToggleAttendance: PropTypes.func,
-  colWidths: PropTypes.arrayOf(PropTypes.number),
   isExpiringSoon: PropTypes.bool,
 };
 
 ListCard.defaultProps = {
-  colWidths: [50, 150, 200, 150, 200, 150, 100],
   isExpiringSoon: false,
 };
 

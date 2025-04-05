@@ -1,4 +1,4 @@
-import { Button, Col, Row, Tag } from "antd";
+import { Button, Col, Row } from "antd";
 
 const TrainerCard = ({
   index,

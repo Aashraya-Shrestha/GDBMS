@@ -1,18 +1,7 @@
 import React, { useEffect, useState } from "react";
-import {
-  Row,
-  Col,
-  Input,
-  Button,
-  Card,
-  Space,
-  Statistic,
-  Badge,
-  Tag,
-  message,
-} from "antd";
+import { Row, Col, Input, Button, Card, Space, Statistic, message } from "antd";
 import ListCard from "../Components/ListCard";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import dayjs from "dayjs";
@@ -20,7 +9,6 @@ import { SearchOutlined, SyncOutlined } from "@ant-design/icons";
 
 const GeneralUser = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [header, setHeader] = useState("General Users");
   const [members, setMembers] = useState([]);

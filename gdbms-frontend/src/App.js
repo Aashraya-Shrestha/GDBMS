@@ -16,15 +16,38 @@ import LandingPage from "./Pages/LandingPage";
 import TrainerList from "./Pages/TrainerList";
 import TrainerDetail from "./Pages/TrainerDetail";
 import MemberDashboard from "./Pages/Dashboard";
+import axios from "axios";
 
 function App() {
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(false);
+  const [gymName, setGymName] = useState("Gym"); // Default name
+  const [loadingGymName, setLoadingGymName] = useState(false);
+
+  // Fetch gym name when logged in
+  const fetchGymName = async () => {
+    try {
+      setLoadingGymName(true);
+      const response = await axios.get(
+        `${process.env.REACT_APP_GYM_ROUTE}/gymInfo`,
+        {
+          withCredentials: true,
+        }
+      );
+      setGymName(response.data.gym.gymName);
+    } catch (error) {
+      console.error("Failed to fetch gym name:", error);
+      // Keep the default name if fetch fails
+    } finally {
+      setLoadingGymName(false);
+    }
+  };
 
   useEffect(() => {
-    let isLoggedIn = localStorage.getItem("isLogin");
+    const isLoggedIn = localStorage.getItem("isLogin");
     if (isLoggedIn) {
       setIsLogin(true);
+      fetchGymName(); // Fetch gym name when logged in
       navigate("/dashboard");
     } else {
       setIsLogin(false);
@@ -35,7 +58,7 @@ function App() {
 
   return (
     <div className="App">
-      {isLogin && <SideBar className="sidebar" />}
+      {isLogin && <SideBar className="sidebar" gymName={gymName} />}
       <div className={`main-content ${isLogin ? "with-sidebar" : ""}`}>
         <ToastContainer />
         <Routes>

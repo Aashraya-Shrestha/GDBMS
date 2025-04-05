@@ -1,117 +1,29 @@
-import { Button, Col, Row } from "antd";
+import { Button, Card, Descriptions } from "antd";
 
-const TrainerCard = ({
-  index,
-  name,
-  contact,
-  experience,
-  trainerDetail,
-  colWidths,
-}) => {
-  const theme = {
-    cardBg: "#ffffff",
-    border: "#e0e0e0",
-    primary: "#1890ff",
-    hoverBg: "#f8fafc",
-  };
-
+const TrainerCard = ({ name, contact, experience, trainerDetail }) => {
   return (
-    <Row
-      style={{
-        display: "flex",
-        width: "100%",
-        backgroundColor: theme.cardBg,
-        borderBottom: `1px solid ${theme.border}`,
-        transition: "all 0.3s ease",
-        ":hover": {
-          backgroundColor: theme.hoverBg,
-          transform: "translateY(-1px)",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-        },
-      }}
-    >
-      <Col
-        style={{
-          padding: "18px 24px",
-          textAlign: "left",
-          flex: `0 0 ${colWidths[0]}px`,
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          color: "#555",
-          fontSize: 14,
-        }}
-      >
-        {index}
-      </Col>
-      <Col
-        style={{
-          padding: "18px 24px",
-          textAlign: "left",
-          flex: `0 0 ${colWidths[1]}px`,
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          fontWeight: 500,
-          color: "#333",
-          fontSize: 15,
-        }}
-      >
-        {name}
-      </Col>
-      <Col
-        style={{
-          padding: "18px 24px",
-          textAlign: "center",
-          flex: `0 0 ${colWidths[2]}px`,
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          color: "#555",
-          fontSize: 14,
-        }}
-      >
-        {contact || "Not provided"}
-      </Col>
-      <Col
-        style={{
-          padding: "18px 24px",
-          textAlign: "center",
-          flex: `0 0 ${colWidths[3]}px`,
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          color: "#555",
-          fontSize: 14,
-        }}
-      >
-        {experience ? `${experience} years` : "N/A"}
-      </Col>
-      <Col
-        style={{
-          padding: "18px 24px",
-          textAlign: "center",
-          flex: `0 0 ${colWidths[4]}px`,
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-      >
-        <Button
-          type="primary"
-          onClick={trainerDetail}
-          style={{
-            backgroundColor: theme.primary,
-            borderColor: theme.primary,
-            padding: "0 20px",
-            height: 36,
-            fontWeight: 500,
-          }}
-        >
+    <Card
+      title={name}
+      extra={
+        <Button onClick={trainerDetail} type="link" size="small">
           View Details
         </Button>
-      </Col>
-    </Row>
+      }
+      style={{
+        marginBottom: 16,
+        borderRadius: "8px",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+      }}
+    >
+      <Descriptions column={1} size="small">
+        <Descriptions.Item label="Contact">
+          {contact || "Not provided"}
+        </Descriptions.Item>
+        <Descriptions.Item label="Experience">
+          {experience ? `${experience} years` : "N/A"}
+        </Descriptions.Item>
+      </Descriptions>
+    </Card>
   );
 };
 

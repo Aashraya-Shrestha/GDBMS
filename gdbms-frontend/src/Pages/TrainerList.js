@@ -12,6 +12,13 @@ import {
   Statistic,
   message,
   Divider,
+  Grid,
+  Badge,
+  Descriptions,
+  Tag,
+  Select,
+  Switch,
+  Table,
 } from "antd";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -23,7 +30,11 @@ import {
   SearchOutlined,
   UserAddOutlined,
   SyncOutlined,
+  AppstoreOutlined,
+  TableOutlined,
 } from "@ant-design/icons";
+
+const { useBreakpoint } = Grid;
 
 const TrainerList = () => {
   const [isAddTrainerModalVisible, setIsAddTrainerModalVisible] =
@@ -45,7 +56,9 @@ const TrainerList = () => {
     totalTrainers: 0,
     avgExperience: 0,
   });
+  const [viewMode, setViewMode] = useState("table");
   const navigate = useNavigate();
+  const screens = useBreakpoint();
 
   const theme = {
     primary: "#1890ff",
@@ -57,12 +70,61 @@ const TrainerList = () => {
   };
 
   const columns = [
-    { title: "No.", width: 150 },
-    { title: "Trainer Name", width: 300 },
-    { title: "Contact Info", width: 300 },
-    { title: "Experience", width: 250 },
-    { title: "Actions", width: 200 },
+    {
+      title: "No.",
+      dataIndex: "index",
+      key: "index",
+      width: 100,
+      align: "left",
+    },
+    {
+      title: "Trainer Name",
+      dataIndex: "name",
+      key: "name",
+      align: "left",
+      width: 200,
+    },
+    {
+      title: "Contact Info",
+      dataIndex: "contact",
+      key: "contact",
+      width: 200,
+      align: "left",
+      render: (text) => text || "Not provided",
+    },
+    {
+      title: "Experience",
+      dataIndex: "experience",
+      key: "experience",
+      width: 150,
+      align: "left",
+      render: (text) => (text ? `${text} years` : "N/A"),
+    },
+    {
+      title: "Actions",
+      key: "actions",
+      width: 150,
+      align: "left",
+      render: (_, record) => (
+        <Button
+          type="primary"
+          onClick={() => handleViewTrainer(record._id)}
+          style={{
+            backgroundColor: theme.primary,
+            borderColor: theme.primary,
+          }}
+        >
+          View Details
+        </Button>
+      ),
+    },
   ];
+
+  useEffect(() => {
+    if (screens.xs && viewMode === "table") {
+      setViewMode("card");
+    }
+  }, [screens, viewMode]);
 
   useEffect(() => {
     const fetchTrainers = async () => {
@@ -205,16 +267,66 @@ const TrainerList = () => {
     }
   };
 
-  const filteredTrainers = trainers.filter((trainer) =>
-    Object.values(trainer).some((value) =>
-      value.toString().toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredTrainers = trainers
+    .filter((trainer) =>
+      Object.values(trainer).some((value) =>
+        value.toString().toLowerCase().includes(searchQuery.toLowerCase())
+      )
     )
+    .map((trainer, index) => ({
+      ...trainer,
+      index: index + 1,
+      key: trainer._id,
+    }));
+
+  const renderCardView = () => (
+    <div
+      className="card-container"
+      style={{
+        display: "grid",
+        gridTemplateColumns: screens.md ? "repeat(2, 1fr)" : "1fr",
+        gap: "16px",
+        padding: "16px 0",
+      }}
+    >
+      {filteredTrainers.map((trainer) => (
+        <Card
+          key={trainer._id}
+          title={trainer.name}
+          extra={
+            <Button
+              onClick={() => handleViewTrainer(trainer._id)}
+              type="link"
+              size="small"
+            >
+              View Details
+            </Button>
+          }
+          style={{
+            borderRadius: "8px",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+          }}
+        >
+          <Descriptions column={1} size="small">
+            <Descriptions.Item label="Contact">
+              {trainer.contact || "Not provided"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Experience">
+              {trainer.experience ? `${trainer.experience} years` : "N/A"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Joined On">
+              {dayjs(trainer.joiningDate).format("DD/MM/YYYY")}
+            </Descriptions.Item>
+          </Descriptions>
+        </Card>
+      ))}
+    </div>
   );
 
   return (
     <div
       className="flex-1 flex-col px-4 pb-4"
-      style={{ backgroundColor: theme.secondary }}
+      style={{ backgroundColor: theme.secondary, minHeight: "100vh" }}
     >
       <div style={{ marginBottom: "24px" }}>
         <h1
@@ -268,12 +380,37 @@ const TrainerList = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{
-                width: "400px",
+                width: screens.xs ? "100%" : "400px",
                 height: 40,
                 borderRadius: 6,
               }}
               allowClear
             />
+
+            {!screens.xs && (
+              <Button
+                icon={
+                  viewMode === "table" ? (
+                    <AppstoreOutlined />
+                  ) : (
+                    <TableOutlined />
+                  )
+                }
+                onClick={() =>
+                  setViewMode(viewMode === "table" ? "card" : "table")
+                }
+                style={{
+                  backgroundColor: theme.primary,
+                  borderColor: theme.primary,
+                  color: "#fff",
+                  height: 40,
+                  borderRadius: 6,
+                  fontWeight: 500,
+                }}
+              >
+                {viewMode === "table" ? "Card View" : "Table View"}
+              </Button>
+            )}
 
             <Button
               type="primary"
@@ -287,7 +424,7 @@ const TrainerList = () => {
                 fontWeight: 500,
               }}
             >
-              Add New Trainer
+              {screens.xs ? "Add" : "Add New Trainer"}
             </Button>
 
             <Button
@@ -302,47 +439,12 @@ const TrainerList = () => {
                 fontWeight: 500,
               }}
             >
-              Refresh Data
+              {screens.xs ? "Refresh" : "Refresh Data"}
             </Button>
           </div>
         </Card>
       </div>
 
-      {/* Table Header */}
-      <Row
-        style={{
-          backgroundColor: theme.headerBg,
-          color: theme.text,
-          fontWeight: 600,
-          padding: "16px 0",
-          margin: 0,
-          width: "100%",
-          display: "flex",
-          borderRadius: "8px 8px 0 0",
-          border: `1px solid ${theme.border}`,
-          boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-        }}
-      >
-        {columns.map((col, index) => (
-          <Col
-            key={index}
-            style={{
-              padding: "0 24px",
-              textAlign: "center",
-              flex: `0 0 ${col.width}px`,
-              justifyContent: "center",
-              display: "flex",
-              alignItems: "center",
-              color: "#555",
-              fontSize: 15,
-            }}
-          >
-            {col.title}
-          </Col>
-        ))}
-      </Row>
-
-      {/* Trainer Rows */}
       {isLoading ? (
         <div
           style={{
@@ -359,17 +461,21 @@ const TrainerList = () => {
           <p style={{ fontSize: 16, color: "#666" }}>Loading trainer data...</p>
         </div>
       ) : filteredTrainers.length > 0 ? (
-        filteredTrainers.map((item, index) => (
-          <TrainerCard
-            key={item._id}
-            index={index + 1}
-            name={item.name}
-            contact={item.contact}
-            experience={item.experience}
-            trainerDetail={() => handleViewTrainer(item._id)}
-            colWidths={columns.map((col) => col.width)}
+        viewMode === "table" ? (
+          <Table
+            columns={columns}
+            dataSource={filteredTrainers}
+            pagination={false}
+            scroll={{ x: true }}
+            style={{
+              backgroundColor: theme.cardBg,
+              borderRadius: 8,
+              boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+            }}
           />
-        ))
+        ) : (
+          renderCardView()
+        )
       ) : (
         <div
           style={{
@@ -399,7 +505,6 @@ const TrainerList = () => {
         </div>
       )}
 
-      {/* Add Trainer Modal */}
       <Modal
         title="Add New Trainer"
         open={isAddTrainerModalVisible}

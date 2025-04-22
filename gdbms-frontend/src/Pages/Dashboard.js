@@ -19,6 +19,7 @@ import axios from "axios";
 import { Card, Spin, Modal, Button, message } from "antd";
 import Avatar from "@mui/material/Avatar";
 import QRScannerModal from "../Modals/QrScanner";
+import { ToastContainer, toast } from "react-toastify";
 
 const API_BASE_URL = "http://localhost:4000/members";
 
@@ -124,24 +125,11 @@ const Dashboard = () => {
         key: "scan",
         duration: 3,
       });
-
+      toast.success("member marked as present");
       // Refresh stats after successful scan
       const statsRes = await axios.get(`${API_BASE_URL}/all-members`, {
         withCredentials: true,
       });
-
-      // Also refresh today's attendance data if available
-      try {
-        const attendanceRes = await axios.get(
-          `${API_BASE_URL}/todays-attendance`,
-          {
-            withCredentials: true,
-          }
-        );
-        // You might want to store this in state if you display it
-      } catch (attendanceErr) {
-        console.log("Couldn't refresh attendance data", attendanceErr);
-      }
 
       setStats((prev) => ({
         ...prev,
@@ -417,6 +405,7 @@ const Dashboard = () => {
       <div className="text-center text-gray-500 text-sm py-4 border-t">
         <p>Contact us at: 98735456732 for any inquiries</p>
       </div>
+      <ToastContainer />
     </div>
   );
 };

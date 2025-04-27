@@ -91,7 +91,7 @@ const MemberList = () => {
       setIsLoading(true);
       try {
         const response = await axios.get(
-          "https://localhost:4000/members/all-members",
+          "http://localhost:4000/members/all-members",
           { withCredentials: true }
         );
 

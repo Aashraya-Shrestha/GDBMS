@@ -116,7 +116,7 @@ const MemberList = () => {
         if (shouldMarkAbsent) {
           await markAbsentMembers(filteredMembers);
           const updatedResponse = await axios.get(
-            "https://localhost:4000/members/all-members",
+            "http://localhost:4000/members/all-members",
             { withCredentials: true }
           );
           filteredMembers = applyFilters(updatedResponse.data.members);
@@ -179,7 +179,7 @@ const MemberList = () => {
         membersToMarkAbsent.map(async (member) => {
           try {
             await axios.post(
-              `https://localhost:4000/members/mark-attendance/${member._id}`,
+              `http://localhost:4000/members/mark-attendance/${member._id}`,
               { status: "absent", date: today },
               { withCredentials: true }
             );
@@ -194,7 +194,7 @@ const MemberList = () => {
   const fetchTopAttendee = async () => {
     try {
       const response = await axios.get(
-        "https://localhost:4000/members/analyze-top-attendee-renewal",
+        "http://localhost:4000/members/analyze-top-attendee-renewal",
         { withCredentials: true }
       );
       if (response.data.topAttendee) {
@@ -213,7 +213,7 @@ const MemberList = () => {
     try {
       const yesterday = dayjs().subtract(1, "day").format("YYYY-MM-DD");
       const response = await axios.get(
-        "https://localhost:4000/members/all-members",
+        "http://localhost:4000/members/all-members",
         { withCredentials: true }
       );
 
@@ -241,7 +241,7 @@ const MemberList = () => {
         membersToMarkAbsent.map(async (member) => {
           try {
             await axios.post(
-              `https://localhost:4000/members/mark-attendance/${member._id}`,
+              `http://localhost:4000/members/mark-attendance/${member._id}`,
               { status: "absent", date: yesterday },
               { withCredentials: true }
             );
@@ -252,7 +252,7 @@ const MemberList = () => {
       );
 
       const updatedResponse = await axios.get(
-        "https://localhost:4000/members/all-members",
+        "http://localhost:4000/members/all-members",
         { withCredentials: true }
       );
 
@@ -278,7 +278,7 @@ const MemberList = () => {
   const handleMembershipSubmit = async () => {
     try {
       const response = await axios.post(
-        "https://localhost:4000/plans/add-membership",
+        "http://localhost:4000/plans/add-membership",
         membershipData,
         { withCredentials: true }
       );
@@ -304,7 +304,7 @@ const MemberList = () => {
       const newStatus = currentStatus === "present" ? "absent" : "present";
 
       await axios.post(
-        `https://localhost:4000/members/mark-attendance/${id}`,
+        `http://localhost:4000/members/mark-attendance/${id}`,
         { status: newStatus, date: today },
         { withCredentials: true }
       );
@@ -785,7 +785,7 @@ const MemberList = () => {
               onClick={() => {
                 setIsLoading(true);
                 axios
-                  .get("https://localhost:4000/members/all-members", {
+                  .get("http://localhost:4000/members/all-members", {
                     withCredentials: true,
                   })
                   .then((response) => {

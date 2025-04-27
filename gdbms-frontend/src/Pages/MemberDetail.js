@@ -437,7 +437,6 @@ const MemberDetail = () => {
   if (!member) {
     return <div className="w-5/6 mx-auto p-5">Member not found</div>;
   }
-
   const stats = calculateAttendanceStats();
 
   return (

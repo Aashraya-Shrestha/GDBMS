@@ -29,14 +29,12 @@ router.put("/editMember/:id", auth, memberController.editMember);
 router.post("/mark-attendance/:id", auth, memberController.markAttendance);
 router.get("/attendance/:id", auth, memberController.getMemberAttendance);
 router.get("/todays-attendance", auth, memberController.getTodaysAttendance);
-router.post("/bulk-attendance", auth, memberController.bulkUpdateAttendance);
 router.get(
   "/analyze-top-attendee-renewal",
   auth,
   memberController.analyzeTopAttendeeRenewal
 );
 router.post("/scan-qr", memberController.scanQRCode);
-
 router.post("/freeze-account/:id", auth, memberController.freezeAccount);
 router.post("/unfreeze-account/:id", auth, memberController.unfreezeAccount);
 

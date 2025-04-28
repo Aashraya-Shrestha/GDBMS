@@ -783,55 +783,6 @@ exports.getTodaysAttendance = async (req, res) => {
   }
 };
 
-// Bulk update attendance for multiple members
-exports.bulkUpdateAttendance = async (req, res) => {
-  try {
-    const { date, updates } = req.body; // updates: [{ memberId, status }]
-
-    const attendanceDate = date ? new Date(date) : new Date();
-    const dateKey = attendanceDate.toISOString().split("T")[0];
-
-    const bulkOps = updates.map((update) => {
-      return {
-        updateOne: {
-          filter: {
-            _id: update.memberId,
-            gym: req.gym._id,
-          },
-          update: {
-            $set: {
-              "attendance.$[elem].status": update.status,
-              [`currentMonthAttendance.${dateKey}`]: update.status,
-            },
-          },
-          arrayFilters: [
-            {
-              "elem.date": {
-                $gte: new Date(attendanceDate.setHours(0, 0, 0, 0)),
-                $lt: new Date(attendanceDate.setHours(23, 59, 59, 999)),
-              },
-            },
-          ],
-          upsert: true,
-        },
-      };
-    });
-
-    await Member.bulkWrite(bulkOps);
-
-    res.status(200).json({
-      message: "Bulk attendance updated successfully",
-      updatedCount: updates.length,
-    });
-  } catch (err) {
-    console.log(err);
-    res.status(500).json({
-      error: "Server Error",
-      details: err.message,
-    });
-  }
-};
-
 exports.analyzeTopAttendeeRenewal = async (req, res) => {
   try {
     const threeMonthsAgo = new Date();

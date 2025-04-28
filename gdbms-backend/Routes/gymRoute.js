@@ -13,8 +13,8 @@ router.post("/logout", gymController.logout);
 router.post("/contact", gymController.sendContactMail);
 
 // Protected Route (requires authentication)
-router.get("/gymInfo", auth, gymController.getLoggedInGym); // Add this route
-router.put("/editInfo", auth, gymController.editLoggedInGym); // Edit logged-in gym's details
-router.delete("/deleteGym", auth, gymController.deleteLoggedInGym); // Edit logged-in gym's details
+router.get("/gymInfo", auth, gymController.getLoggedInGym); 
+router.put("/editInfo", auth, gymController.editLoggedInGym); 
+router.delete("/deleteGym", auth, gymController.deleteLoggedInGym); 
 
 module.exports = router;
